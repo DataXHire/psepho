@@ -1,0 +1,21 @@
+node_modules
+.pnpm-store
+.turbo
+.next
+out
+dist
+build
+.expo
+.expo-shared
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment files - strictly forbidden to commit
+.env
+.env*.local
+!.env.example
+
+.DS_Store
+*.tsbuildinfo
