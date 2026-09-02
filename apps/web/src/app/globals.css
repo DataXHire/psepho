@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --paper: #F1F3F1;
+  --surface: #FAFBFA;
+  --ink: #14171A;
+  --slate: #59636B;
+  --rule: #D3D9D6;
+  --patina: #2E6B5A;
+  --patina-deep: #1F4C40;
+  --alarm: #8C3B2E;
+}
+
+.dark, [data-theme="dark"] {
+  --paper: #101413;
+  --surface: #171C1B;
+  --ink: #ECEFEC;
+  --slate: #99A39E;
+  --rule: #262E2C;
+  --patina: #4FA88C;
+  --patina-deep: #6FC0A5;
+  --alarm: #D4705C;
+}
+
+body {
+  background-color: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-archivo), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Typographic signature: Archivo width 115, weight 600 for question & display headlines */
+.font-display {
+  font-family: var(--font-archivo), -apple-system, BlinkMacSystemFont, sans-serif;
+  font-variation-settings: 'wdth' 115, 'wght' 600;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.font-body {
+  font-family: var(--font-archivo), -apple-system, BlinkMacSystemFont, sans-serif;
+  font-variation-settings: 'wdth' 100, 'wght' 400;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.font-ui-semibold {
+  font-family: var(--font-archivo), -apple-system, BlinkMacSystemFont, sans-serif;
+  font-variation-settings: 'wdth' 100, 'wght' 600;
+  font-weight: 600;
+}
+
+/* Strict requirement: all numbers must use tabular-nums */
+.tabular-nums, .num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* Animations for The One Bold Moment */
+@keyframes pebbleDrop {
+  0% {
+    transform: translateY(-24px) scale(0.7);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(2px) scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-pebble-drop {
+  animation: pebbleDrop 420ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-pebble-drop {
+    animation: none !important;
+    transform: none !important;
+  }
+  .sweep-fill {
+    transition: none !important;
+  }
+}
