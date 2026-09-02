@@ -1,0 +1,55 @@
+{
+  "expo": {
+    "name": "psepho",
+    "slug": "psepho",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "scheme": "psepho",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F1F3F1"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "app.psepho.mobile",
+      "associatedDomains": ["applinks:psepho.app"]
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#F1F3F1"
+      },
+      "package": "app.psepho.mobile",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "psepho"
+            },
+            {
+              "scheme": "https",
+              "host": "psepho.app",
+              "pathPrefix": "/p"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow psepho to scan QR codes for room voting."
+        }
+      ]
+    ]
+  }
+}
