@@ -8,6 +8,13 @@
  */
 export const IS_DEV_BUILD = process.env.NODE_ENV !== 'production';
 
+/**
+ * Note for anyone gating an *import*: this constant hides UI, but a bundler
+ * still records a module edge it finds behind it. To keep a module out of the
+ * bundle entirely, write `process.env.NODE_ENV !== 'production'` inline at the
+ * conditional require — see `PersonaModal`.
+ */
+
 /** Where sample data is allowed at all. */
 export type DataMode = 'live' | 'sample';
 
