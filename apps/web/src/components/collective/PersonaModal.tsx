@@ -14,22 +14,27 @@ import { INDIA_MAP } from '@/lib/collective/geo';
 import type { UserProfile as Persona } from '@/lib/collective/types';
 
 /**
- * Folded to a literal at build time, so the branches below are removed from a
- * production bundle along with the module they reach for.
+ * Spelled out rather than imported from `@/lib/config/environment` on purpose:
+ * the bundler folds this expression where it is written, which removes both the
+ * panel below and the module it reaches for. Read through an import it stays a
+ * runtime check, and the markup and sample data ship to every visitor.
  */
 const IS_DEV_BUILD = process.env.NODE_ENV !== 'production';
 
 /**
- * Reached only from a development build. A static import would keep the sample
- * identities in every bundle even with the UI unreachable, because the app does
- * not declare its modules side-effect free — so the module is pulled in behind
- * the same literal the UI is behind.
+ * Sample identities, in development only.
+ *
+ * The condition is written out in full rather than read from a variable: the
+ * bundler evaluates it while building its module graph and skips the dead
+ * branch entirely, so the module is never pulled in. Behind a `require` inside
+ * a function — even an unreachable one — the graph still records the edge and
+ * the personas ship to every visitor.
  */
-function loadDevPersonas(): Persona[] {
-  if (!IS_DEV_BUILD) return [];
-  // eslint-disable-next-line @typescript-eslint/no-var-requires, global-require
-  return (require('@/lib/collective/devPersonas') as { devPersonas: Persona[] }).devPersonas;
-}
+const DEV_PERSONAS: Persona[] =
+  process.env.NODE_ENV !== 'production'
+    ? // eslint-disable-next-line @typescript-eslint/no-var-requires, global-require
+      (require('@/lib/collective/devPersonas') as { devPersonas: Persona[] }).devPersonas
+    : [];
 import { Button, Chip, Clamp, Ellipsis, KeyValue, Modal } from '@/components/ui';
 import { BirthDateField } from './BirthDateField';
 import { LocationField, type LocationValue } from './LocationField';
@@ -55,7 +60,7 @@ export const PersonaModal: React.FC = () => {
   const [location, setLocation] = useState<LocationValue>({ stateId: 'in-ka' });
 
   const usingSamples = IS_DEV_BUILD && dataMode === 'sample';
-  const personas = usingSamples ? loadDevPersonas() : [];
+  const personas = usingSamples ? DEV_PERSONAS : [];
   const canApply = name.trim().length > 0 && isUsableBirthDate(birthDate);
 
   const applyCustom = (event: React.FormEvent) => {
