@@ -25,32 +25,49 @@
 }
 
 body {
-  background-color: var(--paper);
-  color: var(--ink);
-  font-family: var(--font-archivo), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: #faf8ff;
+  color: #131b2e;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Typographic signature: Archivo width 115, weight 600 for question & display headlines */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Bricolage Grotesque', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Typographic signature */
 .font-display {
-  font-family: var(--font-archivo), -apple-system, BlinkMacSystemFont, sans-serif;
-  font-variation-settings: 'wdth' 115, 'wght' 600;
-  font-weight: 600;
+  font-family: 'Bricolage Grotesque', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 700;
   line-height: 1.2;
   letter-spacing: -0.01em;
 }
 
 .font-body {
-  font-family: var(--font-archivo), -apple-system, BlinkMacSystemFont, sans-serif;
-  font-variation-settings: 'wdth' 100, 'wght' 400;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   font-weight: 400;
   line-height: 1.5;
 }
 
 .font-ui-semibold {
-  font-family: var(--font-archivo), -apple-system, BlinkMacSystemFont, sans-serif;
-  font-variation-settings: 'wdth' 100, 'wght' 600;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   font-weight: 600;
 }
 
@@ -87,5 +104,75 @@ body {
   }
   .sweep-fill {
     transition: none !important;
+  }
+}
+
+/* Geographic heatmap.
+   The readout sits beside the map wherever the container is wide enough, and
+   drops beneath it when it is not. It is never drawn over the map itself. */
+.geo-heatmap {
+  container-type: inline-size;
+}
+
+.geo-heatmap-readout {
+  min-height: 118px;
+}
+
+.geo-heatmap-canvas {
+  height: 214px;
+}
+
+/* The plate is tilted away from the viewer: the north edge sits farther back
+   and reads smaller, the south edge comes forward. */
+.geo-heatmap-stage {
+  perspective: 780px;
+  perspective-origin: 50% 26%;
+}
+
+.geo-heatmap-tilt {
+  transform: rotateX(32deg) scale(1.05);
+  transform-origin: 50% 58%;
+  transform-style: preserve-3d;
+}
+
+.geo-heatmap-raised {
+  transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .geo-heatmap-raised {
+    transition: none;
+  }
+}
+
+.geo-heatmap-canvas.is-compact {
+  height: 168px;
+}
+
+@container (min-width: 430px) {
+  .geo-heatmap-layout {
+    flex-direction: row;
+    align-items: stretch;
+  }
+
+  .geo-heatmap-readout {
+    width: 178px;
+    flex: 0 0 178px;
+    min-height: 0;
+  }
+
+  .geo-heatmap-canvas {
+    height: 248px;
+  }
+}
+
+@container (min-width: 720px) {
+  .geo-heatmap-readout {
+    width: 218px;
+    flex-basis: 218px;
+  }
+
+  .geo-heatmap-canvas {
+    height: 320px;
   }
 }
