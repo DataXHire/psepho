@@ -1,4 +1,4 @@
-import { Poll, UserProfile } from './types';
+import { Poll } from './types';
 
 export const initialPolls: Poll[] = [
   // 1. Featured Poll
@@ -9,6 +9,7 @@ export const initialPolls: Poll[] = [
     category: 'Work & Tech',
     kind: 'featured',
     badge: { label: 'Trending Debate', type: 'trending' },
+    status: 'open',
     closesIn: '2 days',
     totalVotes: 184219,
     createdAt: new Date(Date.now() - 86400000).toISOString(),
@@ -55,6 +56,7 @@ export const initialPolls: Poll[] = [
     category: 'Work & Tech',
     kind: 'divided',
     badge: { label: 'High tension', type: 'tension' },
+    status: 'open',
     closesIn: '3 days',
     totalVotes: 12450,
     createdAt: new Date(Date.now() - 43200000).toISOString(),
@@ -100,6 +102,7 @@ export const initialPolls: Poll[] = [
     category: 'Economy & Future',
     kind: 'divided',
     badge: { label: 'Active Debate', type: 'tension' },
+    status: 'open',
     closesIn: '4 days',
     totalVotes: 45120,
     createdAt: new Date(Date.now() - 172800000).toISOString(),
@@ -145,6 +148,7 @@ export const initialPolls: Poll[] = [
     category: 'Work & Tech',
     kind: 'divided',
     badge: { label: 'Deadlock', type: 'tension' },
+    status: 'open',
     closesIn: '5 days',
     totalVotes: 89340,
     createdAt: new Date(Date.now() - 86400000).toISOString(),
@@ -190,6 +194,7 @@ export const initialPolls: Poll[] = [
     category: 'Work & Tech',
     kind: 'surprising',
     badge: { label: 'Most Surprising', type: 'surprising' },
+    status: 'open',
     closesIn: '6 days',
     totalVotes: 54200,
     createdAt: new Date(Date.now() - 259200000).toISOString(),
@@ -236,6 +241,7 @@ export const initialPolls: Poll[] = [
     category: 'Society & Governance',
     kind: 'surprising',
     badge: { label: 'Most Surprising', type: 'surprising' },
+    status: 'open',
     closesIn: '1 day',
     totalVotes: 31800,
     createdAt: new Date(Date.now() - 345600000).toISOString(),
@@ -272,56 +278,5 @@ export const initialPolls: Poll[] = [
     ],
     discoveryNote:
       'Surprisingly high agreement across all age groups, not just parents.',
-  },
-];
-
-export const samplePersonas: UserProfile[] = [
-  {
-    id: 'user-priya',
-    name: 'Priya Sharma',
-    avatar: 'PS',
-    role: 'Tech Lead',
-    city: 'Bengaluru',
-    district: 'Bengaluru Urban',
-    region: 'South',
-    stateCode: 'IN-KA',
-    ageCohort: '25-34',
-    sector: 'Tech & Design',
-  },
-  {
-    id: 'user-arjun',
-    name: 'Arjun Patel',
-    avatar: 'AP',
-    role: 'Operations Director',
-    city: 'Mumbai',
-    district: 'Mumbai Suburban',
-    region: 'West',
-    stateCode: 'IN-MH',
-    ageCohort: '35-49',
-    sector: 'Operations & Supply Chain',
-  },
-  {
-    id: 'user-sneha',
-    name: 'Sneha Verma',
-    avatar: 'SV',
-    role: 'Public Policy Researcher',
-    city: 'New Delhi',
-    district: 'New Delhi',
-    region: 'North',
-    stateCode: 'IN-DL',
-    ageCohort: '18-24',
-    sector: 'Governance & Civic Tech',
-  },
-  {
-    id: 'user-rajesh',
-    name: 'Rajesh Mukherjee',
-    avatar: 'RM',
-    role: 'Senior Consultant',
-    city: 'Kolkata',
-    district: 'Kolkata',
-    region: 'East',
-    stateCode: 'IN-WB',
-    ageCohort: '50+',
-    sector: 'Corporate & Finance',
   },
 ];

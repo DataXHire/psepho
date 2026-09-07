@@ -2,7 +2,32 @@ export type GeoRegion = 'South' | 'West' | 'North' | 'East' | 'Central';
 
 export type AgeCohort = '18-24' | '25-34' | '35-49' | '50+';
 
+/**
+ * How precisely someone chose to state when they were born.
+ *
+ * Analysis only needs the age band, so the year alone is enough. Anyone willing
+ * to give more may, but nothing asks them to.
+ */
+export type BirthPrecision = 'year' | 'month' | 'day';
+
+export interface BirthDate {
+  year: number;
+  /** 1-12, present at 'month' precision or finer. */
+  month?: number;
+  /** 1-31, present only at 'day' precision. */
+  day?: number;
+}
+
 export type TensionLevel = 'Deadlock' | 'High tension' | 'Active Debate' | 'Consensus';
+
+/**
+ * Where a poll is in its life.
+ *
+ * `open` accepts votes. `closed` is final: the result stands and no further
+ * vote is counted. A poll with no closing date stays open until its owner
+ * closes it by hand.
+ */
+export type PollStatus = 'open' | 'closed';
 
 export interface PollOption {
   id: string;
@@ -41,7 +66,11 @@ export interface Poll {
   kind: 'featured' | 'divided' | 'surprising' | 'user';
   options: [PollOption, PollOption, ...PollOption[]];
   totalVotes: number;
-  closesIn: string;
+  status: PollStatus;
+  /** Human-readable time left, or `null` when the poll never closes on its own. */
+  closesIn: string | null;
+  /** When it was closed, if it has been. */
+  closedAt?: string | null;
   badge?: PollBadge;
   regionalBreakdown: Record<GeoRegion, RegionalStat>;
   demographicBreakdown: DemographicStat[];
@@ -56,9 +85,18 @@ export interface UserProfile {
   avatar?: string;
   role: string;
   city: string;
+  /** Display name of the district, e.g. "Bengaluru Urban". */
   district: string;
-  region: GeoRegion;
+  /** Map id of that district, e.g. `ka-bengaluru-urban`, when one was chosen. */
+  districtId?: string;
+  /** Map id of the State or UT, e.g. `in-ka`. */
+  stateId: string;
   stateCode: string;
+  /** Zone the State reports into. Derived from `stateId`, never asked for. */
+  region: GeoRegion;
+  /** Exactly as much of the birth date as the viewer chose to give. */
+  birthDate?: BirthDate;
+  /** Age band used for analysis. Derived from `birthDate` when there is one. */
   ageCohort: AgeCohort;
   sector: string;
 }

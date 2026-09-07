@@ -12,6 +12,8 @@ import {
   ChoicePalette,
 } from './types';
 import { INDIA_MAP, WORLD_MAP, hasDistrictMap } from './geo';
+import { choiceColours } from '@/lib/theme';
+import { STATE_REGION } from './demographics';
 
 /**
  * Computes tension/polarization level based on option vote distribution
@@ -201,19 +203,13 @@ export function castVoteInPoll(
   };
 }
 
-// Distinct perceptually balanced palettes matching Kinetic Pulse
-const DISTINCT_COLORS = [
-  { color: '#5D3FD3', lightColor: '#E6DEFF', textColor: '#451EBB' }, // Signal Purple (Option 1)
-  { color: '#00838F', lightColor: '#E0F7FA', textColor: '#006064' }, // Ocean Teal (Option 2)
-  { color: '#C2185B', lightColor: '#FCE4EC', textColor: '#880E4F' }, // Rose Crimson (Option 3)
-  { color: '#D97706', lightColor: '#FEF3C7', textColor: '#92400E' }, // Warm Amber (Option 4)
-  { color: '#2563EB', lightColor: '#DBEAFE', textColor: '#1E40AF' }, // Royal Blue (Option 5)
-  { color: '#059669', lightColor: '#D1FAE5', textColor: '#065F46' }, // Emerald (Option 6)
-];
-
+/**
+ * Choice colours come from the theme, so a choice looks the same on a card, on
+ * the map and in the create form.
+ */
 export function getChoicePalettes(options: PollOption[]): ChoicePalette[] {
   return options.map((opt, idx) => {
-    const pal = DISTINCT_COLORS[idx % DISTINCT_COLORS.length];
+    const pal = choiceColours[idx % choiceColours.length];
     return {
       optionId: opt.id,
       color: pal.color,
@@ -237,25 +233,6 @@ export const MIN_REPORTABLE_SAMPLE: Record<GeoScope, number> = {
   world: 250,
   india: 150,
   state: 40,
-};
-
-/** The zone each State/UT reports into, matching `Poll.regionalBreakdown`. */
-const STATE_REGION: Record<string, GeoRegion> = {
-  // North
-  'in-jk': 'North', 'in-la': 'North', 'in-hp': 'North', 'in-pb': 'North',
-  'in-hr': 'North', 'in-ch': 'North', 'in-dl': 'North', 'in-uk': 'North',
-  'in-rj': 'North', 'in-up': 'North',
-  // West
-  'in-gj': 'West', 'in-mh': 'West', 'in-ga': 'West', 'in-dh': 'West',
-  // Central
-  'in-mp': 'Central', 'in-cg': 'Central',
-  // East (including the North-East)
-  'in-br': 'East', 'in-jh': 'East', 'in-od': 'East', 'in-wb': 'East',
-  'in-sk': 'East', 'in-as': 'East', 'in-ar': 'East', 'in-mn': 'East',
-  'in-ml': 'East', 'in-mz': 'East', 'in-nl': 'East', 'in-tr': 'East',
-  // South
-  'in-ka': 'South', 'in-kl': 'South', 'in-tn': 'South', 'in-ap': 'South',
-  'in-tg': 'South', 'in-py': 'South', 'in-ld': 'South', 'in-an': 'South',
 };
 
 /** Rough share of the national population, used to split a zone's responses. */
