@@ -3,6 +3,12 @@
 @tailwind utilities;
 
 :root {
+  /* Scrollbars are drawn from the page's own palette. */
+  --scroll-thumb: #c9c4d7;
+  --scroll-thumb-hover: #a5a0b8;
+  /* How far a thumb stops short of a rounded corner. */
+  --scroll-inset: 26px;
+
   --paper: #F1F3F1;
   --surface: #FAFBFA;
   --ink: #14171A;
@@ -14,6 +20,9 @@
 }
 
 .dark, [data-theme="dark"] {
+  --scroll-thumb: #3b4152;
+  --scroll-thumb-hover: #4e556b;
+
   --paper: #101413;
   --surface: #171C1B;
   --ink: #ECEFEC;
@@ -22,6 +31,29 @@
   --patina: #4FA88C;
   --patina-deep: #6FC0A5;
   --alarm: #D4705C;
+}
+
+/* Root cause of most "text escapes its box" bugs: a flex or grid child
+   defaults to min-width:auto, so a long word or an unbreakable number pushes
+   the item wider than its container instead of wrapping or truncating.
+   :where() keeps this at zero specificity, so any explicit width still wins. */
+:where(.flex, .grid, .inline-flex) > * {
+  min-width: 0;
+}
+
+/* Nothing should be able to widen the page itself. */
+html,
+body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+/* A search input draws its own clear button in WebKit, which collided with
+   the one the field renders. */
+input[type='search']::-webkit-search-cancel-button,
+input[type='search']::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 body {
@@ -77,6 +109,81 @@ h1, h2, h3, h4, h5, h6 {
   font-feature-settings: "tnum";
 }
 
+/* Scrollbars.
+   They take the page's colours instead of the browser's, and the thumb floats
+   inside a transparent border so it stops short of a rounded corner rather
+   than riding over it.
+
+   Chrome ignores the ::-webkit-scrollbar pseudo-elements entirely once the
+   standard `scrollbar-width` is set on the same element, and only the
+   pseudo-elements can inset the thumb — so the standard properties are kept
+   for engines that have no pseudo-element support at all. */
+html::-webkit-scrollbar,
+.scroll-inset::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+html::-webkit-scrollbar-track,
+.scroll-inset::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+html::-webkit-scrollbar-thumb,
+.scroll-inset::-webkit-scrollbar-thumb {
+  background-color: var(--scroll-thumb);
+  background-clip: padding-box;
+  border: 3px solid transparent;
+  border-radius: 999px;
+}
+
+html::-webkit-scrollbar-thumb:hover,
+.scroll-inset::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scroll-thumb-hover);
+}
+
+html::-webkit-scrollbar-corner,
+.scroll-inset::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Keep the thumb clear of the card's rounded corners. */
+.scroll-inset::-webkit-scrollbar-track-piece:start {
+  margin-top: var(--scroll-inset);
+}
+
+.scroll-inset::-webkit-scrollbar-track-piece:end {
+  margin-bottom: var(--scroll-inset);
+}
+
+/* Any scroll area inside a rounded card reserves its gutter so content does
+   not shift when the bar appears. */
+.scroll-inset {
+  scrollbar-gutter: stable;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  html,
+  .scroll-inset {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scroll-thumb) transparent;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 160ms ease-out both;
+}
+
 /* Animations for The One Bold Moment */
 @keyframes pebbleDrop {
   0% {
@@ -98,7 +205,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-pebble-drop {
+  .animate-pebble-drop,
+  .animate-fade-in {
     animation: none !important;
     transform: none !important;
   }
@@ -156,8 +264,8 @@ h1, h2, h3, h4, h5, h6 {
   }
 
   .geo-heatmap-readout {
-    width: 178px;
-    flex: 0 0 178px;
+    width: 196px;
+    flex: 0 0 196px;
     min-height: 0;
   }
 
@@ -168,8 +276,8 @@ h1, h2, h3, h4, h5, h6 {
 
 @container (min-width: 720px) {
   .geo-heatmap-readout {
-    width: 218px;
-    flex-basis: 218px;
+    width: 232px;
+    flex-basis: 232px;
   }
 
   .geo-heatmap-canvas {
