@@ -1,0 +1,16 @@
+{
+  "name": "psepho-geo-build",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Offline generator that turns official boundary data into the SVG path modules used by the Geographic Heatmap.",
+  "scripts": {
+    "build": "node build-geo.mjs"
+  },
+  "dependencies": {
+    "d3-geo": "^3.1.1",
+    "mapshaper": "^0.6.102",
+    "polylabel": "^1.1.0",
+    "world-atlas": "^2.0.2"
+  }
+}
