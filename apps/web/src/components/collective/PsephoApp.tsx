@@ -1,186 +1,157 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo } from 'react';
 import { usePsepho } from '@/lib/collective/PsephoContext';
+import { appConfig } from '@/lib/config/appConfig';
+import { filterPolls } from '@/lib/collective/pollFilters';
+import { Button, Chip, EmptyState, SectionHeading } from '@/components/ui';
 import { PsephoHeader } from './PsephoHeader';
+import { AppBackground } from './AppBackground';
 import { FeaturedDebateCard } from './FeaturedDebateCard';
 import { PsephoInsightPanel } from './PsephoInsightPanel';
 import { DividedDebateCard } from './DividedDebateCard';
 import { SurprisingDebateCard } from './SurprisingDebateCard';
 import { ForYouSection } from './ForYouSection';
+import { ProposalsPanel } from './ProposalsPanel';
+import { TopicsBrowser } from './TopicsBrowser';
 import { AskQuestionModal } from './AskQuestionModal';
 import { PersonaModal } from './PersonaModal';
 import { PollDetailModal } from './PollDetailModal';
 import { PsephoFooter } from './PsephoFooter';
 
 export const PsephoApp: React.FC = () => {
-  const { polls, activeTab, activeCategory, setActiveCategory, openAskModal } = usePsepho();
-  const [isProposalsMinimized, setIsProposalsMinimized] = useState(false);
+  const { polls, activeTab, activeCategory, search, setActiveCategory, setSearch, openAskModal } =
+    usePsepho();
 
-  // Categories
-  const categories = [
-    'All',
-    'Work & Tech',
-    'Economy & Future',
-    'Society & Governance',
-    'Culture & Life',
-  ];
+  const visible = useMemo(
+    () => filterPolls(polls, { category: activeCategory, search }),
+    [polls, activeCategory, search]
+  );
 
-  // Filter polls by category if not 'All'
-  const filteredPolls = activeCategory === 'All'
-    ? polls
-    : polls.filter((p) => p.category === activeCategory);
-
-  // Group polls into featured, divided, surprising, user-created
-  const featuredPoll = filteredPolls.find((p) => p.kind === 'featured') || filteredPolls[0] || polls[0];
-  const dividedPolls = filteredPolls.filter((p) => p.kind === 'divided');
-  const surprisingPolls = filteredPolls.filter((p) => p.kind === 'surprising');
-  const userPolls = filteredPolls.filter((p) => p.kind === 'user');
+  const featuredPoll = visible.find((p) => p.kind === 'featured') ?? visible[0];
+  const dividedPolls = visible.filter((p) => p.kind === 'divided');
+  const surprisingPolls = visible.filter((p) => p.kind === 'surprising');
+  const isFiltered = activeCategory !== 'All' || search.trim().length > 0;
 
   return (
-    <div className="min-h-screen flex flex-col bg-background text-on-background">
-      {/* Fixed Header */}
+    <div className="relative flex min-h-screen flex-col bg-background text-on-background">
+      <AppBackground />
       <PsephoHeader />
 
-      {/* Main Content Area */}
-      <main className="flex-grow pt-24 pb-16 max-w-[1200px] w-full mx-auto px-container-padding-mobile md:px-container-padding-desktop">
-        {/* Category Filter Bar (Visible when on Topics or as quick filter) */}
-        {(activeTab === 'Topics' || activeCategory !== 'All') && (
-          <div className="mb-6 flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-            <span className="text-xs font-label-bold text-on-surface-variant flex items-center gap-1 mr-2">
-              <span className="material-symbols-outlined text-sm">tune</span>
-              Topics:
-            </span>
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setActiveCategory(cat)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-label-bold whitespace-nowrap transition-all ${
-                  activeCategory === cat
-                    ? 'bg-primary text-on-primary shadow-xs'
-                    : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-        )}
+      <main className="mx-auto w-full max-w-[1200px] flex-grow px-container-padding-mobile pb-16 pt-24 md:px-container-padding-desktop">
+        <ProposalsPanel />
 
-        {/* User-Created Polls Banner (if any) */}
-        {userPolls.length > 0 && (
-          <div className="mb-8 p-4 bg-primary/5 rounded-xl border border-primary/20 transition-all duration-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary text-sm">campaign</span>
-                <span className="font-label-bold text-xs uppercase text-primary">
-                  Your Community Proposals ({userPolls.length})
-                </span>
-              </div>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setIsProposalsMinimized(!isProposalsMinimized)}
-                  className="inline-flex items-center gap-1 text-xs text-on-surface-variant hover:text-primary transition-colors px-2 py-1 rounded hover:bg-primary/10"
-                  title={isProposalsMinimized ? 'Expand section' : 'Minimize section'}
-                >
-                  <span className="material-symbols-outlined text-base">
-                    {isProposalsMinimized ? 'expand_more' : 'expand_less'}
-                  </span>
-                  <span>{isProposalsMinimized ? 'Expand' : 'Minimize'}</span>
-                </button>
-                <button
-                  onClick={openAskModal}
-                  className="text-xs font-semibold text-primary hover:underline"
-                >
-                  + New Proposal
-                </button>
-              </div>
-            </div>
+        {activeTab === 'Topics' && <TopicsBrowser />}
 
-            {!isProposalsMinimized && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3 animate-fade-in">
-                {userPolls.map((poll) => (
-                  <DividedDebateCard key={poll.id} poll={poll} />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Featured Section: Hero Debate (70%) + Insight Panel (30%) */}
-        {featuredPoll && (
-          <section className="flex flex-col lg:flex-row gap-card-gap mb-14">
-            <FeaturedDebateCard poll={featuredPoll} />
-            <PsephoInsightPanel poll={featuredPoll} />
+        {activeTab === 'For You' && (
+          <section aria-labelledby="for-you-heading" className="mb-12">
+            <h2
+              id="for-you-heading"
+              className="mb-4 font-display text-2xl font-extrabold uppercase tracking-tight text-on-surface md:text-3xl"
+            >
+              For you
+            </h2>
+            <ForYouSection />
           </section>
         )}
 
-        {/* WHAT PEOPLE ARE THINKING GRID */}
-        <section>
-          <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
-            <h2 className="font-display text-2xl md:text-3xl text-on-surface font-extrabold uppercase tracking-tight">
-              WHAT PEOPLE ARE THINKING
-            </h2>
-
-            {/* Subtle civic integrity assurance */}
-            <span className="text-xs text-on-surface-variant font-caption flex items-center gap-1 bg-surface-container-low px-3 py-1 rounded-full border border-outline-variant/20">
-              <span className="material-symbols-outlined text-sm text-primary">shield</span>
-              <span>Civic consensus • Zero raw IP storage</span>
+        {activeTab !== 'Topics' && isFiltered && (
+          <div className="mb-6 flex flex-wrap items-center gap-2 text-xs text-on-surface-variant">
+            <span>
+              Showing <strong className="tabular-nums text-on-surface">{visible.length}</strong>{' '}
+              {visible.length === 1 ? 'debate' : 'debates'}
             </span>
+            {activeCategory !== 'All' && <Chip tone="primary">{activeCategory}</Chip>}
+            {search.trim() && <Chip tone="neutral">“{search.trim()}”</Chip>}
+            <button
+              type="button"
+              onClick={() => {
+                setActiveCategory('All');
+                setSearch('');
+              }}
+              className="font-label-bold text-primary hover:underline"
+            >
+              Clear
+            </button>
           </div>
+        )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-card-gap">
-            {/* SUBSECTION 1: MOST DIVIDED */}
-            <div className="col-span-1 md:col-span-2 lg:col-span-3">
-              <h3 className="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wider mb-4 border-b border-outline-variant/20 pb-2 flex items-center justify-between">
-                <span>Most Divided</span>
-                <span className="text-[11px] normal-case text-outline-variant">
-                  High polarization &amp; deadlock debates
-                </span>
-              </h3>
+        {activeTab !== 'Topics' && featuredPoll ? (
+          <section className="mb-14 flex flex-col gap-card-gap lg:flex-row lg:items-start">
+            <FeaturedDebateCard poll={featuredPoll} />
+            <PsephoInsightPanel poll={featuredPoll} />
+          </section>
+        ) : activeTab !== 'Topics' ? (
+          <EmptyState
+            icon="search_off"
+            title="No debates match"
+            body="Try another topic, clear the search, or raise the question yourself."
+            action={
+              <Button icon="add" onClick={openAskModal}>
+                Ask the collective
+              </Button>
+            }
+          />
+        ) : null}
+
+        {activeTab !== 'Topics' && featuredPoll && (
+          <section>
+            <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+              <h2 className="font-display text-2xl font-extrabold uppercase tracking-tight text-on-surface md:text-3xl">
+                What people are thinking
+              </h2>
+              <Chip tone="neutral" icon="shield">
+                {appConfig.privacy.assurance}
+              </Chip>
             </div>
 
-            {dividedPolls.map((poll) => (
-              <DividedDebateCard key={poll.id} poll={poll} />
-            ))}
+            {dividedPolls.length > 0 && (
+              <>
+                <SectionHeading
+                  title="Most Divided"
+                  hint="High polarization & deadlock debates"
+                />
+                <div className="mb-10 grid grid-cols-1 gap-card-gap md:grid-cols-2 lg:grid-cols-3">
+                  {dividedPolls.map((poll) => (
+                    <DividedDebateCard key={poll.id} poll={poll} owned={poll.kind === 'user'} />
+                  ))}
+                </div>
+              </>
+            )}
 
-            {/* SUBSECTION 2: MOST SURPRISING */}
-            <div className="col-span-1 md:col-span-2 lg:col-span-3 mt-8">
-              <h3 className="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wider mb-4 border-b border-outline-variant/20 pb-2 flex items-center justify-between">
-                <span>Most Surprising</span>
-                <span className="text-[11px] normal-case text-outline-variant">
-                  Significant demographic anomaly discoveries
-                </span>
-              </h3>
-            </div>
+            {surprisingPolls.length > 0 && (
+              <>
+                <SectionHeading
+                  title="Most Surprising"
+                  hint="Significant demographic anomaly discoveries"
+                />
+                <div className="mb-10 grid grid-cols-1 gap-card-gap md:grid-cols-2 lg:grid-cols-3">
+                  {surprisingPolls.map((poll, index) => (
+                    <SurprisingDebateCard
+                      key={poll.id}
+                      poll={poll}
+                      variant={index % 2 === 0 ? 'tertiary' : 'secondary'}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
 
-            {surprisingPolls.map((poll, idx) => (
-              <SurprisingDebateCard
-                key={poll.id}
-                poll={poll}
-                variant={idx % 2 === 0 ? 'tertiary' : 'secondary'}
-              />
-            ))}
-
-            {/* SUBSECTION 3: FOR YOU */}
-            <div className="col-span-1 md:col-span-2 lg:col-span-3 mt-8">
-              <h3 className="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wider mb-4 border-b border-outline-variant/20 pb-2 flex items-center justify-between">
-                <span>For You</span>
-                <span className="text-[11px] normal-case text-outline-variant">
-                  Demographic cohort &amp; district alignment
-                </span>
-              </h3>
-            </div>
-
-            <ForYouSection />
-          </div>
-        </section>
+            {activeTab !== 'For You' && (
+              <>
+                <SectionHeading
+                  title="For You"
+                  hint="Demographic cohort & district alignment"
+                />
+                <ForYouSection />
+              </>
+            )}
+          </section>
+        )}
       </main>
 
-      {/* Footer */}
       <PsephoFooter />
 
-      {/* Interactive Modals */}
       <AskQuestionModal />
       <PersonaModal />
       <PollDetailModal />

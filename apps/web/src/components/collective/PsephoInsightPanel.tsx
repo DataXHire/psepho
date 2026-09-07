@@ -1,27 +1,27 @@
 'use client';
 
 import React from 'react';
-import { Poll } from '@/lib/collective/types';
-import { GeographicHeatmap } from './GeographicHeatmap';
+import type { Poll } from '@/lib/collective/types';
 import { computeRegionalVariance } from '@/lib/collective/analytics';
+import { Chip } from '@/components/ui';
+import { GeographicHeatmap } from './GeographicHeatmap';
 
 interface PsephoInsightPanelProps {
   poll: Poll;
 }
 
 export const PsephoInsightPanel: React.FC<PsephoInsightPanelProps> = ({ poll }) => {
-  const { maxRegion, minRegion, variancePct, takeaway } = computeRegionalVariance(
+  const { takeaway } = computeRegionalVariance(
     poll.regionalBreakdown,
-    poll.options[0]?.label.toLowerCase() || 'this option'
+    poll.options[0]?.label.toLowerCase() ?? 'this option'
   );
 
   return (
-    <div className="w-full lg:w-[30%] bg-surface-container rounded-xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-outline-variant/20 flex flex-col justify-between">
-      <div>
-        {/* Panel Header */}
-        <div className="flex items-center gap-2 mb-2">
+    <aside className="flex w-full min-w-0 flex-col justify-between rounded-xl border border-outline-variant/20 bg-surface-container p-5 shadow-[0_4px_20px_rgba(0,0,0,0.04)] md:p-6 lg:w-[30%]">
+      <div className="min-w-0">
+        <div className="mb-2 flex items-center gap-2">
           <span
-            className="material-symbols-outlined text-primary text-xl"
+            className="material-symbols-outlined text-xl text-primary"
             style={{ fontVariationSettings: "'FILL' 1" }}
           >
             insights
@@ -29,28 +29,22 @@ export const PsephoInsightPanel: React.FC<PsephoInsightPanelProps> = ({ poll }) 
           <h2 className="font-label-bold text-label-bold text-primary">psepho Insight</h2>
         </div>
 
-        {/* Title */}
-        <div className="flex items-center justify-between mb-3">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h3 className="font-headline-md text-headline-md text-on-surface">Consensus Heatmap</h3>
-          <span className="text-[10px] font-caption text-primary font-semibold bg-primary/10 px-2 py-0.5 rounded-full">
-            Dynamic Gradient
-          </span>
+          <Chip tone="primary">Dynamic gradient</Chip>
         </div>
 
-        {/* Geographic Multi-Scope Gradient Heatmap */}
-        <div className="mb-4">
+        <div className="mb-4 min-w-0">
           <GeographicHeatmap poll={poll} initialScope="india" />
         </div>
       </div>
 
-      {/* Dynamic Key Takeaway Callout */}
-      <div className="bg-surface-bright p-3.5 rounded-lg border-l-4 border-primary shadow-xs mt-3">
-        <p className="font-caption text-caption text-on-surface-variant leading-relaxed">
+      <div className="mt-3 rounded-lg border-l-4 border-primary bg-surface-bright p-3.5 shadow-xs">
+        <p className="font-caption text-caption leading-relaxed text-on-surface-variant">
           <strong className="text-on-surface">Insight: </strong>
-          {takeaway}
+          {takeaway.replace(/^Insight:\s*/, '')}
         </p>
       </div>
-    </div>
+    </aside>
   );
 };
-

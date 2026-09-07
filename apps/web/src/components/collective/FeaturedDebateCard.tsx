@@ -1,21 +1,35 @@
 'use client';
 
 import React from 'react';
-import { Poll } from '@/lib/collective/types';
+import type { Poll } from '@/lib/collective/types';
 import { usePsepho } from '@/lib/collective/PsephoContext';
+import { closingLabel, responseCount } from '@/lib/collective/pollFilters';
+import { Chip, Clamp, Meter } from '@/components/ui';
+import { useChoicePalettes } from './PollTally';
 
 interface FeaturedDebateCardProps {
   poll: Poll;
 }
 
+/** Choices lay out two-up, or three-up once there are enough of them. */
+function columnsFor(count: number): string {
+  if (count <= 2) return 'sm:grid-cols-2';
+  if (count === 3 || count === 6) return 'sm:grid-cols-2 lg:grid-cols-3';
+  return 'sm:grid-cols-2';
+}
+
 export const FeaturedDebateCard: React.FC<FeaturedDebateCardProps> = ({ poll }) => {
   const { castVote, setInspectPollId } = usePsepho();
+  const palettes = useChoicePalettes(poll);
   const userVote = poll.userVotedOptionId;
+  const isClosed = poll.status === 'closed';
 
   return (
-    <div className="w-full lg:w-[70%] bg-surface-container-lowest rounded-xl p-6 md:p-8 shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-outline-variant/20 relative overflow-hidden group flex flex-col justify-between">
-      {/* Background Icon Watermark */}
-      <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-15 transition-opacity duration-300 pointer-events-none select-none">
+    <article className="group relative flex w-full flex-col overflow-hidden rounded-xl border border-outline-variant/20 bg-surface-container-lowest p-6 shadow-[0_4px_20px_rgba(0,0,0,0.04)] md:p-8 lg:w-[70%]">
+      <div
+        className="pointer-events-none absolute right-0 top-0 select-none p-4 opacity-5 transition-opacity duration-300 group-hover:opacity-15"
+        aria-hidden="true"
+      >
         <span
           className="material-symbols-outlined text-7xl text-primary"
           style={{ fontVariationSettings: "'FILL' 1" }}
@@ -24,118 +38,116 @@ export const FeaturedDebateCard: React.FC<FeaturedDebateCardProps> = ({ poll }) 
         </span>
       </div>
 
-      <div>
-        {/* Top Badges & Integrity Pill */}
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-          <div className="inline-flex items-center gap-2 bg-tertiary-container/10 text-tertiary px-3.5 py-1 rounded-full">
-            <span className="w-2 h-2 rounded-full bg-tertiary animate-pulse" />
-            <span className="font-label-bold text-label-bold">Trending Debate</span>
-          </div>
+      <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <Chip tone={isClosed ? 'neutral' : 'tertiary'} dot>
+          {isClosed ? 'Final result' : poll.badge?.label || 'Trending Debate'}
+        </Chip>
+        <Chip tone="neutral" icon="verified_user">
+          One vote per browser
+        </Chip>
+      </header>
 
-          <div className="inline-flex items-center gap-1.5 text-on-surface-variant font-caption text-caption bg-surface-container-low px-3 py-1 rounded-full border border-outline-variant/20">
-            <span className="material-symbols-outlined text-sm text-primary">verified_user</span>
-            <span>One vote per browser</span>
-          </div>
-        </div>
+      <h1 className="mb-6 max-w-2xl break-words font-display text-headline-lg-mobile leading-tight tracking-tight text-on-surface md:text-headline-lg">
+        {poll.question}
+      </h1>
 
-        {/* Question Title */}
-        <h1 className="font-display text-headline-lg-mobile md:text-headline-lg mb-8 text-on-surface max-w-2xl tracking-tight leading-tight">
-          {poll.question}
-        </h1>
-
-        {/* Options Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-          {poll.options.map((opt) => {
-            const isSelected = userVote === opt.id;
-            return (
-              <button
-                key={opt.id}
-                onClick={() => castVote(poll.id, opt.id)}
-                className={`flex flex-col p-6 rounded-lg border-2 transition-all duration-200 text-left group/btn relative ${
-                  isSelected
-                    ? 'border-primary bg-surface-container/50 shadow-md ring-2 ring-primary/20 scale-[1.01]'
-                    : 'border-outline-variant/30 hover:border-primary hover:bg-surface-container/30 bg-surface-bright shadow-xs hover:shadow-md hover:scale-[1.01] active:scale-95'
-                }`}
-              >
-                {/* Header of Option */}
-                <div className="flex items-center justify-between mb-4 w-full">
-                  <span
-                    className={`material-symbols-outlined text-3xl transition-colors duration-200 ${
-                      isSelected
-                        ? 'text-primary'
-                        : 'text-on-surface-variant group-hover/btn:text-primary'
-                    }`}
-                    style={{ fontVariationSettings: "'FILL' 1" }}
-                  >
-                    {opt.icon || 'how_to_vote'}
-                  </span>
-
-                  <div className="flex items-center gap-2">
-                    {isSelected && (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-label-bold bg-primary text-on-primary px-2 py-0.5 rounded-full">
-                        <span className="material-symbols-outlined text-xs">check</span>
-                        Voted
-                      </span>
-                    )}
-                    <span
-                      className={`font-headline-md text-headline-md ${
-                        isSelected ? 'text-primary font-extrabold' : 'text-primary'
-                      }`}
-                    >
-                      {opt.percentage}%
-                    </span>
-                  </div>
-                </div>
-
-                {/* Option Title */}
-                <span className="font-headline-md text-headline-md mb-1.5 text-on-surface">
-                  {opt.label}
+      {/* The choices take the slack when this card is stretched by a taller
+          neighbour, so the card fills its height instead of trailing off. */}
+      <div className={`mb-6 grid gap-4 grid-cols-1 ${columnsFor(poll.options.length)}`}>
+        {poll.options.map((option, index) => {
+          const isSelected = userVote === option.id;
+          const colour = palettes[index]?.color;
+          return (
+            <button
+              key={option.id}
+              type="button"
+              disabled={isClosed}
+              aria-pressed={isSelected}
+              onClick={() => castVote(poll.id, option.id)}
+              className={`group/btn relative flex flex-col rounded-lg border-2 p-5 text-left transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
+                isSelected
+                  ? 'bg-surface-container/50 shadow-md'
+                  : 'border-outline-variant/30 bg-surface-bright shadow-xs'
+              } ${
+                isClosed
+                  ? 'cursor-default'
+                  : 'hover:border-primary hover:bg-surface-container/30 hover:shadow-md active:scale-[0.99]'
+              }`}
+              style={isSelected ? { borderColor: colour } : undefined}
+            >
+              <div className="mb-3 flex w-full items-center justify-between gap-2">
+                <span
+                  className="material-symbols-outlined text-3xl transition-colors duration-200"
+                  style={{
+                    color: isSelected ? colour : undefined,
+                    fontVariationSettings: "'FILL' 1",
+                  }}
+                >
+                  {option.icon || 'how_to_vote'}
                 </span>
 
-                {/* Subtitle */}
-                {opt.subtitle && (
-                  <span className="font-body-md text-body-md text-on-surface-variant leading-snug">
-                    {opt.subtitle}
+                <div className="flex min-w-0 shrink items-center justify-end gap-1.5">
+                  {isSelected && (
+                    <span
+                      className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 font-label-bold text-[11px] text-on-primary"
+                      style={{ backgroundColor: colour }}
+                    >
+                      <span className="material-symbols-outlined text-xs">check</span>
+                      Voted
+                    </span>
+                  )}
+                  <span
+                    className="shrink-0 font-headline-md text-headline-md tabular-nums"
+                    style={{ color: palettes[index]?.textColor }}
+                  >
+                    {option.percentage}%
                   </span>
-                )}
-
-                {/* Visual Progress Bar within Option */}
-                <div className="mt-4 w-full bg-outline-variant/20 h-1.5 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full transition-all duration-500 rounded-full ${
-                      isSelected ? 'bg-primary' : 'bg-primary/70'
-                    }`}
-                    style={{ width: `${opt.percentage}%` }}
-                  />
                 </div>
-              </button>
-            );
-          })}
-        </div>
+              </div>
+
+              <Clamp as="span" lines={2} className="mb-1 font-headline-md text-headline-md text-on-surface">
+                {option.label}
+              </Clamp>
+              {option.subtitle && (
+                <Clamp as="span" lines={2} className="font-body-md text-body-md leading-snug text-on-surface-variant">
+                  {option.subtitle}
+                </Clamp>
+              )}
+
+              <Meter
+                value={option.percentage}
+                colour={colour}
+                className="mt-4"
+                label={`${option.label} share`}
+              />
+            </button>
+          );
+        })}
       </div>
 
-      {/* Meta Bar & CTA */}
-      <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-outline-variant/15 text-on-surface-variant font-caption text-caption">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1.5 font-medium">
+      <footer className="flex flex-wrap items-center justify-between gap-4 border-t border-outline-variant/15 pt-4 font-caption text-caption text-on-surface-variant">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          <span className="flex items-center gap-1.5 font-medium">
             <span className="material-symbols-outlined text-base text-primary">group</span>
-            <span>{poll.totalVotes.toLocaleString()} responses</span>
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-base">schedule</span>
-            <span>Closes in {poll.closesIn}</span>
-          </div>
+            <span className="tabular-nums">{responseCount(poll.totalVotes, false)}</span>
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="material-symbols-outlined text-base">
+              {isClosed ? 'lock' : poll.closesIn === null ? 'all_inclusive' : 'schedule'}
+            </span>
+            <span>{closingLabel(poll)}</span>
+          </span>
         </div>
 
         <button
+          type="button"
           onClick={() => setInspectPollId(poll.id)}
-          className="inline-flex items-center gap-1.5 text-primary hover:text-primary-container font-label-bold text-label-bold hover:underline transition-colors"
+          className="inline-flex items-center gap-1.5 font-label-bold text-label-bold text-primary transition-colors hover:underline"
         >
           <span className="material-symbols-outlined text-sm">analytics</span>
           <span>Inspect Demographics</span>
         </button>
-      </div>
-    </div>
+      </footer>
+    </article>
   );
 };

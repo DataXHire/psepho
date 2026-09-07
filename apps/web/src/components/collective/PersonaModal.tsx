@@ -2,39 +2,80 @@
 
 import React, { useState } from 'react';
 import { usePsepho } from '@/lib/collective/PsephoContext';
-import { samplePersonas } from '@/lib/collective/seedData';
-import { AgeCohort, GeoRegion, UserProfile } from '@/lib/collective/types';
+import type { BirthDate, BirthPrecision, UserProfile } from '@/lib/collective/types';
+import {
+  cohortForBirthDate,
+  describeBirthDate,
+  isUsableBirthDate,
+  precisionOf,
+  regionForState,
+} from '@/lib/collective/demographics';
+import { INDIA_MAP } from '@/lib/collective/geo';
+import type { UserProfile as Persona } from '@/lib/collective/types';
+
+/**
+ * Folded to a literal at build time, so the branches below are removed from a
+ * production bundle along with the module they reach for.
+ */
+const IS_DEV_BUILD = process.env.NODE_ENV !== 'production';
+
+/**
+ * Reached only from a development build. A static import would keep the sample
+ * identities in every bundle even with the UI unreachable, because the app does
+ * not declare its modules side-effect free — so the module is pulled in behind
+ * the same literal the UI is behind.
+ */
+function loadDevPersonas(): Persona[] {
+  if (!IS_DEV_BUILD) return [];
+  // eslint-disable-next-line @typescript-eslint/no-var-requires, global-require
+  return (require('@/lib/collective/devPersonas') as { devPersonas: Persona[] }).devPersonas;
+}
+import { Button, Chip, Clamp, Ellipsis, KeyValue, Modal } from '@/components/ui';
+import { BirthDateField } from './BirthDateField';
+import { LocationField, type LocationValue } from './LocationField';
+
+const FIELD =
+  'w-full rounded-lg border border-outline-variant/30 bg-surface-container-low px-3 py-2 text-sm text-on-surface outline-none transition-all placeholder:text-outline focus:border-primary focus:bg-surface-bright';
 
 export const PersonaModal: React.FC = () => {
-  const { isPersonaModalOpen, closePersonaModal, currentProfile, setCurrentProfile } = usePsepho();
+  const {
+    isPersonaModalOpen,
+    closePersonaModal,
+    currentProfile,
+    setCurrentProfile,
+    dataMode,
+    setDataMode,
+  } = usePsepho();
 
-  const [customName, setCustomName] = useState('');
-  const [customAge, setCustomAge] = useState<AgeCohort>('25-34');
-  const [customRegion, setCustomRegion] = useState<GeoRegion>('South');
-  const [customCity, setCustomCity] = useState('Bengaluru');
-  const [customRole, setCustomRole] = useState('Engineer / Analyst');
+  const [name, setName] = useState('');
+  const [role, setRole] = useState('');
+  const [city, setCity] = useState('');
+  const [birthDate, setBirthDate] = useState<BirthDate | null>(null);
+  const [precision, setPrecision] = useState<BirthPrecision>('year');
+  const [location, setLocation] = useState<LocationValue>({ stateId: 'in-ka' });
 
-  if (!isPersonaModalOpen) return null;
+  const usingSamples = IS_DEV_BUILD && dataMode === 'sample';
+  const personas = usingSamples ? loadDevPersonas() : [];
+  const canApply = name.trim().length > 0 && isUsableBirthDate(birthDate);
 
-  const handleSelectPersona = (persona: UserProfile) => {
-    setCurrentProfile(persona);
-    closePersonaModal();
-  };
+  const applyCustom = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!canApply) return;
 
-  const handleCustomSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!customName.trim()) return;
-
+    const state = INDIA_MAP.shapes.find((shape) => shape.id === location.stateId);
     const profile: UserProfile = {
       id: `user-custom-${Date.now()}`,
-      name: customName.trim(),
-      avatar: customName.slice(0, 2).toUpperCase(),
-      role: customRole.trim() || 'Civic Participant',
-      city: customCity.trim() || 'Bengaluru',
-      district: `${customCity.trim()} District`,
-      region: customRegion,
-      stateCode: 'IN-LOCAL',
-      ageCohort: customAge,
+      name: name.trim(),
+      avatar: name.trim().slice(0, 2).toUpperCase(),
+      role: role.trim() || 'Civic participant',
+      city: city.trim() || location.districtName || state?.name || '',
+      district: location.districtName ?? '',
+      districtId: location.districtId,
+      stateId: location.stateId,
+      stateCode: state?.code ?? '',
+      region: regionForState(location.stateId),
+      birthDate,
+      ageCohort: cohortForBirthDate(birthDate),
       sector: 'General',
     };
 
@@ -42,158 +83,203 @@ export const PersonaModal: React.FC = () => {
     closePersonaModal();
   };
 
-  const handleSignOut = () => {
-    setCurrentProfile(null);
-    closePersonaModal();
-  };
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-on-surface/40 backdrop-blur-sm animate-fade-in">
-      <div className="bg-surface-container-lowest rounded-xl max-w-lg w-full p-6 md:p-8 shadow-2xl border border-outline-variant/30 relative max-h-[90vh] overflow-y-auto">
-        {/* Close Button */}
-        <button
-          onClick={closePersonaModal}
-          className="absolute top-4 right-4 text-on-surface-variant hover:text-on-surface p-1 rounded-full hover:bg-surface-container transition-colors"
-        >
-          <span className="material-symbols-outlined text-xl">close</span>
-        </button>
+    <Modal
+      open={isPersonaModalOpen}
+      onClose={closePersonaModal}
+      eyebrow="Your profile"
+      eyebrowIcon="badge"
+      title="Sign in & demographics"
+      labelledBy="persona-modal-title"
+    >
+      <p className="mb-5 text-xs leading-relaxed text-on-surface-variant">
+        psepho groups responses by age band and by district. Nothing here is inferred from your
+        connection — the platform stores no raw IP address, so anything it knows about you is
+        what you type below.
+      </p>
 
-        {/* Modal Header */}
-        <div className="flex items-center gap-2 mb-2">
-          <span className="material-symbols-outlined text-primary">badge</span>
-          <span className="font-label-bold text-xs uppercase tracking-wider text-primary">
-            Demographic Persona Switcher
-          </span>
+      {currentProfile && (
+        <div className="mb-5 rounded-lg border border-primary/20 bg-surface-container p-3">
+          <KeyValue
+            className="text-xs"
+            label={
+              <>
+                <span className="text-on-surface-variant">Active profile: </span>
+                <strong className="text-on-surface">{currentProfile.name}</strong>
+              </>
+            }
+            value={
+              <button
+                type="button"
+                onClick={() => {
+                  setCurrentProfile(null);
+                  closePersonaModal();
+                }}
+                className="font-semibold text-tertiary hover:underline"
+              >
+                Sign out
+              </button>
+            }
+          />
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            <Chip tone="primary">{currentProfile.ageCohort}</Chip>
+            {currentProfile.birthDate && (
+              <Chip tone="neutral">{describeBirthDate(currentProfile.birthDate)}</Chip>
+            )}
+            <Chip tone="neutral">
+              {currentProfile.district || currentProfile.stateCode} · {currentProfile.region} India
+            </Chip>
+          </div>
         </div>
-        <h3 className="font-headline-md text-2xl text-on-surface mb-2">
-          Sign In &amp; Demographic Test
-        </h3>
-        <p className="font-body-md text-xs text-on-surface-variant mb-6">
-          To test how psepho dynamically computes subgroup insights (&ldquo;People Like
-          You&rdquo;), select a demographic persona or enter custom location details.
-        </p>
+      )}
 
-        {/* Current status pill */}
-        {currentProfile && (
-          <div className="mb-6 p-3 bg-surface-container rounded-lg border border-primary/20 flex items-center justify-between">
-            <div className="text-xs">
-              <span className="text-on-surface-variant">Active Profile: </span>
-              <strong className="text-on-surface">{currentProfile.name}</strong> (
-              {currentProfile.ageCohort} • {currentProfile.region} India)
+      {/* Sample identities are a development affordance. The whole block is
+          compiled out of a production build, so it cannot be reached there. */}
+      {IS_DEV_BUILD && (
+        <section className="mb-5 rounded-lg border border-dashed border-outline-variant/50 bg-surface-container-low/50 p-3">
+          <KeyValue
+            className="mb-2"
+            label={
+              <span className="flex items-center gap-1.5 font-label-bold text-xs text-on-surface">
+                <span className="material-symbols-outlined text-sm text-outline">science</span>
+                Data mode
+                <Chip tone="neutral">dev build only</Chip>
+              </span>
+            }
+            value={
+              <span
+                role="radiogroup"
+                aria-label="Data mode"
+                className="inline-flex rounded-full border border-outline-variant/30 bg-surface-container-lowest p-0.5"
+              >
+                {(['live', 'sample'] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    role="radio"
+                    aria-checked={dataMode === mode}
+                    onClick={() => setDataMode(mode)}
+                    className={`rounded-full px-2.5 py-1 font-label-bold text-[11px] capitalize transition-colors ${
+                      dataMode === mode
+                        ? 'bg-primary text-on-primary shadow-xs'
+                        : 'text-on-surface-variant hover:text-primary'
+                    }`}
+                  >
+                    {mode}
+                  </button>
+                ))}
+              </span>
+            }
+          />
+          <p className="text-[11px] leading-relaxed text-on-surface-variant">
+            {usingSamples
+              ? 'Sample identities are available below. Switch to live to work as a real visitor would.'
+              : 'Behaving as a real visitor: no sample identities offered.'}
+          </p>
+
+          {usingSamples && (
+            <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
+              {personas.map((persona) => {
+                const selected = currentProfile?.id === persona.id;
+                return (
+                  <button
+                    key={persona.id}
+                    type="button"
+                    onClick={() => {
+                      setCurrentProfile(persona);
+                      closePersonaModal();
+                    }}
+                    className={`rounded-lg border p-2.5 text-left transition-all ${
+                      selected
+                        ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                        : 'border-outline-variant/30 hover:border-primary hover:bg-surface-container-low'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-on-primary">
+                        {persona.avatar}
+                      </span>
+                      <span className="min-w-0">
+                        <Ellipsis className="text-xs font-semibold text-on-surface">
+                          {persona.name}
+                        </Ellipsis>
+                        <Ellipsis className="text-[10px] text-on-surface-variant">
+                          {persona.role}
+                        </Ellipsis>
+                      </span>
+                    </div>
+                    <KeyValue
+                      className="mt-2 border-t border-outline-variant/20 pt-1 text-[10px] font-medium text-primary"
+                      label={<Ellipsis>{persona.district || persona.city}</Ellipsis>}
+                      value={persona.ageCohort}
+                    />
+                  </button>
+                );
+              })}
             </div>
-            <button
-              onClick={handleSignOut}
-              className="text-xs text-tertiary hover:underline font-semibold"
-            >
-              Sign Out
-            </button>
-          </div>
-        )}
+          )}
+        </section>
+      )}
 
-        {/* Quick Select Personas */}
-        <div className="space-y-2.5 mb-6">
-          <label className="block font-label-bold text-xs text-on-surface-variant mb-1">
-            Choose a Sample Persona
-          </label>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-            {samplePersonas.map((persona) => {
-              const isSelected = currentProfile?.id === persona.id;
-              return (
-                <button
-                  key={persona.id}
-                  type="button"
-                  onClick={() => handleSelectPersona(persona)}
-                  className={`p-3 rounded-lg text-left border transition-all ${
-                    isSelected
-                      ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                      : 'border-outline-variant/30 hover:border-primary hover:bg-surface-container-low'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5 mb-1">
-                    <div className="w-7 h-7 rounded-full bg-primary text-on-primary text-xs font-bold flex items-center justify-center">
-                      {persona.avatar}
-                    </div>
-                    <div>
-                      <div className="font-semibold text-xs text-on-surface">{persona.name}</div>
-                      <div className="text-[10px] text-on-surface-variant">{persona.role}</div>
-                    </div>
-                  </div>
-                  <div className="text-[10px] text-primary font-medium flex justify-between mt-2 pt-1 border-t border-outline-variant/20">
-                    <span>{persona.city}</span>
-                    <span>Cohort {persona.ageCohort}</span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Divider */}
-        <div className="relative flex py-3 items-center">
-          <div className="flex-grow border-t border-outline-variant/30" />
-          <span className="flex-shrink mx-4 text-xs font-medium text-outline-variant uppercase">
-            or custom details
-          </span>
-          <div className="flex-grow border-t border-outline-variant/30" />
-        </div>
-
-        {/* Custom Profile Form */}
-        <form onSubmit={handleCustomSubmit} className="space-y-3 pt-2">
-          <div>
-            <label className="block text-xs font-semibold text-on-surface-variant mb-1">
-              Your Name
-            </label>
+      <form onSubmit={applyCustom} className="space-y-3">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block">
+            <span className="mb-1 block font-label-bold text-xs text-on-surface-variant">
+              Your name
+            </span>
             <input
               type="text"
-              value={customName}
-              onChange={(e) => setCustomName(e.target.value)}
+              required
+              value={name}
+              onChange={(event) => setName(event.target.value)}
               placeholder="e.g. Vikram Sen"
-              className="w-full px-3 py-2 bg-surface-container-low rounded-lg border border-outline-variant/30 text-xs focus:ring-2 focus:ring-primary outline-none"
+              className={FIELD}
             />
-          </div>
+          </label>
+          <label className="block">
+            <span className="mb-1 block font-label-bold text-xs text-on-surface-variant">
+              What you do <span className="font-normal text-outline">(optional)</span>
+            </span>
+            <input
+              type="text"
+              value={role}
+              onChange={(event) => setRole(event.target.value)}
+              placeholder="e.g. Engineer"
+              className={FIELD}
+            />
+          </label>
+        </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-on-surface-variant mb-1">
-                Age Cohort
-              </label>
-              <select
-                value={customAge}
-                onChange={(e) => setCustomAge(e.target.value as any)}
-                className="w-full px-2 py-2 bg-surface-container-low rounded-lg border border-outline-variant/30 text-xs focus:ring-2 focus:ring-primary outline-none"
-              >
-                <option value="18-24">18-24 (Gen Z / Youth)</option>
-                <option value="25-34">25-34 (Early Career)</option>
-                <option value="35-49">35-49 (Mid Career)</option>
-                <option value="50+">50+ (Experienced / Senior)</option>
-              </select>
-            </div>
+        <BirthDateField
+          value={birthDate}
+          precision={precision}
+          onChange={setBirthDate}
+          onPrecisionChange={setPrecision}
+        />
 
-            <div>
-              <label className="block text-xs font-semibold text-on-surface-variant mb-1">
-                Region (India)
-              </label>
-              <select
-                value={customRegion}
-                onChange={(e) => setCustomRegion(e.target.value as any)}
-                className="w-full px-2 py-2 bg-surface-container-low rounded-lg border border-outline-variant/30 text-xs focus:ring-2 focus:ring-primary outline-none"
-              >
-                <option value="South">South India</option>
-                <option value="West">West India</option>
-                <option value="North">North India</option>
-                <option value="East">East India</option>
-              </select>
-            </div>
-          </div>
+        <LocationField value={location} onChange={setLocation} />
 
-          <button
-            type="submit"
-            className="w-full py-2.5 bg-primary text-on-primary font-label-bold text-xs rounded-full shadow-sm hover:scale-[1.01] active:scale-95 transition-all mt-2"
-          >
-            Apply Custom Demographic Profile
-          </button>
-        </form>
-      </div>
-    </div>
+        <label className="block">
+          <span className="mb-1 block font-label-bold text-xs text-on-surface-variant">
+            City or town <span className="font-normal text-outline">(optional)</span>
+          </span>
+          <input
+            type="text"
+            value={city}
+            onChange={(event) => setCity(event.target.value)}
+            placeholder="e.g. Bengaluru"
+            className={FIELD}
+          />
+        </label>
+
+        <Button type="submit" full disabled={!canApply} icon="person_check" className="mt-1">
+          {canApply ? 'Apply profile' : 'Add a name and a year of birth'}
+        </Button>
+
+        <Clamp lines={3} className="text-[11px] text-on-surface-variant">
+          Stored in this browser only. Sign out at any time and it is removed.
+        </Clamp>
+      </form>
+    </Modal>
   );
 };

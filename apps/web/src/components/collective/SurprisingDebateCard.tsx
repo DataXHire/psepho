@@ -1,8 +1,11 @@
 'use client';
 
 import React from 'react';
-import { Poll } from '@/lib/collective/types';
+import type { Poll } from '@/lib/collective/types';
 import { usePsepho } from '@/lib/collective/PsephoContext';
+import { closingLabel, responseCount } from '@/lib/collective/pollFilters';
+import { Card, Chip, Clamp } from '@/components/ui';
+import { TallyLegend, TallyVoteButtons, useChoicePalettes } from './PollTally';
 
 interface SurprisingDebateCardProps {
   poll: Poll;
@@ -13,90 +16,70 @@ export const SurprisingDebateCard: React.FC<SurprisingDebateCardProps> = ({
   poll,
   variant = 'tertiary',
 }) => {
-  const { castVote, setInspectPollId } = usePsepho();
-  const opt1 = poll.options[0];
-  const opt2 = poll.options[1];
-  const userVote = poll.userVotedOptionId;
+  const { setInspectPollId } = usePsepho();
+  const palettes = useChoicePalettes(poll);
+  const isClosed = poll.status === 'closed';
 
-  const isTertiary = variant === 'tertiary';
-  const glowClass = isTertiary ? 'bg-tertiary-container/15' : 'bg-secondary-container/20';
-  const textColor = isTertiary ? 'text-primary' : 'text-secondary';
+  // The headline number is whichever choice is ahead, not simply the first one.
+  const leadIndex = poll.options.reduce(
+    (best, option, index) => (option.percentage > poll.options[best].percentage ? index : best),
+    0
+  );
+  const lead = poll.options[leadIndex];
+  const glow = variant === 'tertiary' ? 'bg-tertiary-container/15' : 'bg-secondary-container/20';
 
   return (
-    <div className="bg-surface-container-lowest rounded-lg p-6 shadow-xs border border-outline-variant/20 hover:shadow-md transition-all duration-200 relative overflow-hidden flex flex-col justify-between group">
-      {/* Ambient Blurred Orb */}
+    <Card className="group relative flex flex-col justify-between overflow-hidden transition-all duration-200 hover:shadow-md">
       <div
-        className={`absolute -right-4 -top-4 w-28 h-28 ${glowClass} rounded-full blur-2xl pointer-events-none transition-transform duration-500 group-hover:scale-125`}
+        className={`pointer-events-none absolute -right-4 -top-4 h-28 w-28 rounded-full blur-2xl transition-transform duration-500 group-hover:scale-125 ${glow}`}
+        aria-hidden="true"
       />
 
-      <div>
-        {/* Top bar with title and inspect button */}
-        <div className="flex items-start justify-between gap-2 mb-2 relative z-10">
-          <h4 className="font-headline-md text-headline-md text-on-surface">{poll.question}</h4>
-          <button
-            onClick={() => setInspectPollId(poll.id)}
-            title="Inspect demographic breakdown"
-            className="text-outline-variant hover:text-primary transition-colors p-1 rounded-full hover:bg-surface-container"
-          >
-            <span className="material-symbols-outlined text-lg">insights</span>
-          </button>
+      <div className="relative z-10">
+        <div className="mb-2 flex items-start justify-between gap-2">
+          <Clamp as="h4" lines={3} className="font-headline-md text-headline-md text-on-surface">
+            {poll.question}
+          </Clamp>
         </div>
 
-        {/* Large Stat Display */}
-        <div
-          className={`font-display text-display-lg-mobile md:text-display-lg ${textColor} mb-3 flex items-baseline gap-2`}
-        >
-          <span>{opt1.percentage}%</span>
-          <span className="font-body-md text-body-md text-on-surface-variant font-medium">
-            {opt1.label}
+        <div className="mb-3 flex flex-wrap items-baseline gap-x-2 font-display text-display-lg-mobile md:text-display-lg">
+          <span className="shrink-0 tabular-nums" style={{ color: palettes[leadIndex]?.textColor }}>
+            {lead.percentage}%
           </span>
+          <Clamp
+            as="span"
+            lines={1}
+            className="font-body-md text-body-md font-medium text-on-surface-variant"
+          >
+            {lead.label}
+          </Clamp>
         </div>
 
-        {/* Quick Vote Action Bar */}
-        <div className="flex items-center gap-2 mb-4">
-          <button
-            onClick={() => castVote(poll.id, opt1.id)}
-            className={`py-1.5 px-4 rounded-full text-xs font-label-bold transition-all ${
-              userVote === opt1.id
-                ? 'bg-primary text-on-primary shadow-xs'
-                : 'bg-surface-container-low text-primary hover:bg-primary/10 border border-outline-variant/30 active:scale-95'
-            }`}
-          >
-            {opt1.label} {userVote === opt1.id && '✓'}
-          </button>
+        <TallyLegend poll={poll} className="mb-3" />
+        <TallyVoteButtons poll={poll} className="mb-4" />
 
-          <button
-            onClick={() => castVote(poll.id, opt2.id)}
-            className={`py-1.5 px-4 rounded-full text-xs font-label-bold transition-all ${
-              userVote === opt2.id
-                ? 'bg-secondary text-on-secondary shadow-xs'
-                : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high border border-outline-variant/30 active:scale-95'
-            }`}
-          >
-            {opt2.label} {opt2.percentage}% {userVote === opt2.id && '✓'}
-          </button>
-        </div>
-
-        {/* Discovery Callout Box */}
-        <div className="bg-surface-container p-3 rounded-md mt-2 relative z-10 border border-outline-variant/10">
-          <p className="font-caption text-caption text-on-surface-variant leading-relaxed">
-            <strong className={textColor}>Discovery: </strong>
+        <div className="rounded-md border border-outline-variant/10 bg-surface-container p-3">
+          <p className="font-caption text-caption leading-relaxed text-on-surface-variant">
+            <strong style={{ color: palettes[leadIndex]?.textColor }}>Discovery: </strong>
             {poll.discoveryNote ||
               'Divergence observed across age demographics in national dataset.'}
           </p>
         </div>
       </div>
 
-      {/* Meta Footer */}
-      <div className="flex items-center justify-between text-on-surface-variant font-caption text-caption pt-3 mt-4 border-t border-outline-variant/10">
-        <span>{(poll.totalVotes / 1000).toFixed(0)}K responses</span>
-        <button
-          onClick={() => setInspectPollId(poll.id)}
-          className="text-primary hover:underline font-semibold"
-        >
-          View Demographic Split →
-        </button>
+      <div className="relative z-10 mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-outline-variant/10 pt-3 font-caption text-caption text-on-surface-variant">
+        <span className="tabular-nums">{responseCount(poll.totalVotes)}</span>
+        <div className="flex items-center gap-2">
+          {isClosed && <Chip tone="neutral">{closingLabel(poll)}</Chip>}
+          <button
+            type="button"
+            onClick={() => setInspectPollId(poll.id)}
+            className="font-semibold text-primary hover:underline"
+          >
+            View Demographic Split →
+          </button>
+        </div>
       </div>
-    </div>
+    </Card>
   );
 };

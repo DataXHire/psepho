@@ -15,6 +15,8 @@ import {
   type GeoMap,
   type GeoShape,
 } from '@/lib/collective/geo';
+import { mapColours } from '@/lib/theme';
+import { Clamp, Dropdown, KeyValue } from '@/components/ui';
 
 interface GeographicHeatmapProps {
   poll: Poll;
@@ -22,15 +24,13 @@ interface GeographicHeatmapProps {
   compact?: boolean;
 }
 
-/** Ground colour a choice is mixed into; matches `surface-container-low`. */
-const MAP_BASE = '#f2f3ff';
-/** Fill for territory with no reportable data. */
-const NO_DATA_FILL = '#e7e9f3';
-const NO_DATA_INK = '#c3c9da';
-/** Border for a no-data territory: white would disappear against its hatch. */
-const NO_DATA_BORDER = '#98a0ba';
-/** Shadowed edge of the plate the map sits on. */
-const SLAB_INK = '#8b91b2';
+const {
+  base: MAP_BASE,
+  noDataFill: NO_DATA_FILL,
+  noDataInk: NO_DATA_INK,
+  noDataBorder: NO_DATA_BORDER,
+  slabInk: SLAB_INK,
+} = mapColours;
 
 function hexToRgb(hex: string): [number, number, number] {
   const value = parseInt(hex.slice(1), 16);
@@ -233,20 +233,16 @@ export const GeographicHeatmap: React.FC<GeographicHeatmapProps> = ({
 
         <div className="flex items-center gap-1.5 overflow-x-auto">
           {scope === 'state' ? (
-            <label className="flex items-center gap-1">
-              <span className="sr-only">State or Union Territory</span>
-              <select
-                value={stateId}
-                onChange={(event) => drillInto(event.target.value)}
-                className="text-xs py-1 px-2.5 bg-surface-container-lowest border border-primary/30 rounded-full font-label-bold text-primary focus:outline-none focus:ring-1 focus:ring-primary shadow-xs cursor-pointer"
-              >
-                {drillableStates.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <Dropdown
+              value={stateId}
+              options={drillableStates.map((state) => ({ value: state.id, label: state.name }))}
+              onChange={drillInto}
+              ariaLabel="State or Union Territory"
+              icon="map"
+              size="sm"
+              align="right"
+              className="w-44"
+            />
           ) : (
             <>
               <button
@@ -609,13 +605,13 @@ const TerritoryReadout: React.FC<TerritoryReadoutProps> = ({
   drillable,
   pinned,
 }) => (
-  <aside className="geo-heatmap-readout bg-surface-container-lowest border border-outline-variant/25 rounded-xl p-2.5 text-xs shadow-xs">
+  <aside className="geo-heatmap-readout min-w-0 overflow-hidden rounded-xl border border-outline-variant/25 bg-surface-container-lowest p-3 text-xs shadow-xs">
     {readout ? (
       <>
-        <div className="flex items-start justify-between gap-2 pb-1.5 mb-1.5 border-b border-outline-variant/20">
-          <span className="font-label-bold text-xs text-on-surface leading-tight">
+        <div className="mb-1.5 flex items-start justify-between gap-2 border-b border-outline-variant/20 pb-1.5">
+          <Clamp as="span" lines={2} className="font-label-bold text-xs leading-tight text-on-surface">
             {readout.name}
-          </span>
+          </Clamp>
           {pinned && (
             <span className="text-[9px] font-bold text-primary bg-primary/10 rounded-full px-1.5 py-0.5 whitespace-nowrap">
               Pinned
@@ -650,12 +646,12 @@ const TerritoryReadout: React.FC<TerritoryReadoutProps> = ({
           })}
         </div>
 
-        <div className="mt-2 pt-1.5 border-t border-outline-variant/20 flex items-center justify-between text-[9.5px] text-on-surface-variant">
-          <span>Responses</span>
-          <span className="font-semibold text-on-surface tabular-nums">
-            {readout.votes.toLocaleString()}
-          </span>
-        </div>
+        <KeyValue
+          className="mt-2 border-t border-outline-variant/20 pt-1.5 text-[10px] text-on-surface-variant"
+          label="Responses"
+          value={readout.votes.toLocaleString()}
+          valueClassName="font-semibold text-on-surface"
+        />
 
         {drillable && (
           <p className="mt-1.5 text-[9.5px] font-bold text-primary text-center bg-primary/5 rounded py-0.5">
@@ -665,19 +661,19 @@ const TerritoryReadout: React.FC<TerritoryReadoutProps> = ({
       </>
     ) : (
       <>
-        <p className="font-label-bold text-xs text-on-surface mb-1.5 pb-1.5 border-b border-outline-variant/20">
+        <p className="mb-1.5 border-b border-outline-variant/20 pb-1.5 font-label-bold text-xs text-on-surface">
           Consensus by geography
         </p>
-        <p className="text-[10px] text-on-surface-variant leading-relaxed">
-          Shaded areas report enough responses to break out. Hover or tab to one for its
-          split; hatched areas have too few responses to report.
+        <p className="text-[10px] leading-relaxed text-on-surface-variant">
+          Shaded areas report enough responses to break out. Hover or tab to one for its split;
+          hatched areas have too few responses to report.
         </p>
-        <div className="mt-2 pt-1.5 border-t border-outline-variant/20 flex items-center justify-between text-[9.5px] text-on-surface-variant">
-          <span>Reporting</span>
-          <span className="font-semibold text-on-surface tabular-nums">
-            {reporting} of {total} {scopeNoun}
-          </span>
-        </div>
+        <KeyValue
+          className="mt-2 border-t border-outline-variant/20 pt-1.5 text-[10px] text-on-surface-variant"
+          label="Reporting"
+          value={`${reporting} of ${total} ${scopeNoun}`}
+          valueClassName="font-semibold text-on-surface"
+        />
       </>
     )}
   </aside>

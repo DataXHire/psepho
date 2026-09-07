@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { usePsepho } from '@/lib/collective/PsephoContext';
+import { Button, Chip } from '@/components/ui';
 
 export const ForYouSection: React.FC = () => {
   const { currentProfile, openPersonaModal, polls, setInspectPollId } = usePsepho();
@@ -21,12 +22,9 @@ export const ForYouSection: React.FC = () => {
             See how your opinions compare to people with similar interests, age groups, and regional
             locations.
           </p>
-          <button
-            onClick={openPersonaModal}
-            className="bg-primary text-on-primary px-6 py-2 rounded-full font-label-bold text-label-bold hover:scale-[1.02] transition-transform duration-200 ease-out active:scale-95 shadow-sm"
-          >
-            Sign In to See
-          </button>
+          <Button onClick={openPersonaModal} icon="login">
+            Sign in to see
+          </Button>
         </div>
       </div>
     );
@@ -49,9 +47,7 @@ export const ForYouSection: React.FC = () => {
               <h4 className="font-headline-md text-headline-md text-on-surface">
                 {currentProfile.name}
               </h4>
-              <span className="text-xs bg-primary/10 text-primary font-semibold px-2 py-0.5 rounded-full">
-                Cohort {userCohort}
-              </span>
+              <Chip tone="primary">Cohort {userCohort}</Chip>
             </div>
             <p className="font-body-md text-sm text-on-surface-variant">
               {currentProfile.role} • {currentProfile.district}, {currentProfile.city} (
@@ -60,12 +56,9 @@ export const ForYouSection: React.FC = () => {
           </div>
         </div>
 
-        <button
-          onClick={openPersonaModal}
-          className="text-primary hover:bg-primary/10 text-xs font-label-bold px-3 py-1.5 rounded-full border border-primary/20 transition-colors"
-        >
-          Switch Profile / Location
-        </button>
+        <Button variant="outline" size="sm" icon="swap_horiz" onClick={openPersonaModal}>
+          Switch profile / location
+        </Button>
       </div>
 
       {/* Cohort Alignment Cards */}
