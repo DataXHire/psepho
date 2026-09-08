@@ -15,7 +15,7 @@ import {
   type GeoMap,
   type GeoShape,
 } from '@/lib/collective/geo';
-import { mapColours } from '@/lib/theme';
+import { darken, lighten, mapColours, mix } from '@/lib/theme';
 import { Clamp, Dropdown, KeyValue } from '@/components/ui';
 
 interface GeographicHeatmapProps {
@@ -32,37 +32,16 @@ const {
   slabInk: SLAB_INK,
 } = mapColours;
 
-function hexToRgb(hex: string): [number, number, number] {
-  const value = parseInt(hex.slice(1), 16);
-  return [(value >> 16) & 255, (value >> 8) & 255, value & 255];
-}
-
-/** Blends `to` into `from` by `amount` (0..1) and returns an opaque colour. */
-function mixHex(from: string, to: string, amount: number): string {
-  const a = hexToRgb(from);
-  const b = hexToRgb(to);
-  const channel = (i: number) => Math.round(a[i] + (b[i] - a[i]) * amount);
-  return `rgb(${channel(0)}, ${channel(1)}, ${channel(2)})`;
-}
+const mixHex = mix;
 
 /** Lightens a top face, so a raised block reads as catching the light. */
-function litShade(fill: string): string {
-  const rgb = /^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/.exec(fill);
-  if (!rgb) return fill;
-  const lift = (v: string) => Math.round(Number(v) + (255 - Number(v)) * 0.16);
-  return `rgb(${lift(rgb[1])}, ${lift(rgb[2])}, ${lift(rgb[3])})`;
-}
+const litShade = (fill: string) => lighten(fill, 0.16);
 
 /**
  * Darkens a top face into the colour of its own side wall, so each block reads
  * as one solid piece rather than sitting on an unrelated grey shadow.
  */
-function wallShade(fill: string, amount = 0.68): string {
-  const rgb = /^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/.exec(fill);
-  if (!rgb) return SLAB_INK;
-  const shade = (v: string) => Math.round(Number(v) * amount);
-  return `rgb(${shade(rgb[1])}, ${shade(rgb[2])}, ${shade(rgb[3])})`;
-}
+const wallShade = (fill: string) => darken(fill, 0.34);
 
 /**
  * Typical vertical size of a shape's parts, ignoring a few outliers.
