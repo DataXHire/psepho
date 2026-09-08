@@ -32,8 +32,28 @@ const PebbleField: React.FC = () => {
 
   // Randomised per visit, in the browser: doing it during render would make the
   // server and the first client paint disagree.
+  //
+  // A page that mounts with no viewport to speak of — a background tab, a
+  // collapsed pane — would otherwise scatter into a zero-area field and stay
+  // empty for good, so the first real measurement re-scatters.
   useEffect(() => {
-    setStones(scatter(fieldBounds(window.innerWidth, window.innerHeight)));
+    const field = fieldRef.current;
+    if (!field) return;
+
+    const sow = () => {
+      const { innerWidth, innerHeight } = window;
+      if (innerWidth < 1 || innerHeight < 1) return false;
+      setStones(scatter(fieldBounds(innerWidth, innerHeight)));
+      return true;
+    };
+
+    if (sow()) return;
+
+    const observer = new ResizeObserver(() => {
+      if (sow()) observer.disconnect();
+    });
+    observer.observe(field);
+    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {

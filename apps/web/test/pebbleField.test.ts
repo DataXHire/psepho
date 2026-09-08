@@ -39,6 +39,11 @@ describe('pebble field', () => {
       expect(share).toBeLessThan(0.25);
     });
 
+    it('yields nothing for a field with no area, rather than looping', () => {
+      expect(scatter(fieldBounds(0, 0))).toEqual([]);
+      expect(scatter(fieldBounds(1400, 0))).toEqual([]);
+    });
+
     it('lays out differently each time', () => {
       const signature = (stones: Stone[]) =>
         stones.map((s) => `${s.x.toFixed(1)},${s.y.toFixed(1)}`).join('|');
