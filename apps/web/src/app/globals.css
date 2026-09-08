@@ -41,8 +41,12 @@
   min-width: 0;
 }
 
-/* Nothing should be able to widen the page itself. */
-html,
+/* Nothing should be able to widen the page itself.
+
+   Only on <body>: its overflow propagates to the viewport, so the page still
+   clips horizontally while <html> stays the scrolling element. Setting it on
+   <html> makes that element the scroll container instead, and scroll events
+   stop reaching window — which silently killed the background parallax. */
 body {
   overflow-x: hidden;
   max-width: 100%;

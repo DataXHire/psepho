@@ -1,109 +1,166 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { usePsepho } from '@/lib/collective/PsephoContext';
-import { choiceColours, palette } from '@/lib/theme';
+import { PEBBLE_SHAPES, choiceColours, darken, lighten, palette } from '@/lib/theme';
+import {
+  FIELD_VIEWPORTS,
+  fieldBounds,
+  reflow,
+  scatter,
+  step,
+  type Stone,
+} from '@/lib/collective/pebbleField';
 
 /**
  * The decorative layer behind the page, chosen by `appConfig.background` and
  * changeable by the viewer.
  *
- * `none` renders nothing at all. `pebble` scatters voting pebbles that drift as
- * the page scrolls — purely ornamental, so it is inert to pointers and hidden
- * from assistive tech, and it holds still for anyone who asked for less motion.
+ * `none` renders nothing. `pebble` scatters voting pebbles that drift with the
+ * scroll and knock each other aside when they meet. It is purely ornamental:
+ * inert to pointers, hidden from assistive tech, and still for anyone who asked
+ * for less motion.
+ *
+ * Simulation lives in `lib/collective/pebbleField`; this component owns only
+ * the DOM and the animation loop.
  */
 
-/** Vertical span the field wraps over, as a multiple of the viewport height. */
-const FIELD_HEIGHT = 140;
-
-interface Pebble {
-  /** Percent of the viewport width. */
-  x: number;
-  /** Percent down the wrapping field, 0..FIELD_HEIGHT. */
-  y: number;
-  r: number;
-  colour: string;
-  opacity: number;
-  /** How strongly this pebble answers the scroll; far ones move least. */
-  depth: number;
-}
-
-const PEBBLE_COUNT = 30;
-
-/** Deterministic scatter: the same layout every render, no hydration mismatch. */
-function buildPebbles(): Pebble[] {
-  let seed = 0x9e3779b9;
-  const random = () => {
-    seed = (seed * 1664525 + 1013904223) >>> 0;
-    return seed / 0x100000000;
-  };
-
-  return Array.from({ length: PEBBLE_COUNT }, () => {
-    const depth = 0.25 + random() * 0.9;
-    return {
-      x: random() * 100,
-      y: random() * FIELD_HEIGHT,
-      r: 18 + random() * 70,
-      colour: choiceColours[Math.floor(random() * choiceColours.length)].color,
-      opacity: 0.14 + random() * 0.16,
-      depth,
-    };
-  });
-}
-
 const PebbleField: React.FC = () => {
-  const pebbles = useMemo(buildPebbles, []);
-  const [offset, setOffset] = useState(0);
-  const frame = useRef(0);
+  const [stones, setStones] = useState<Stone[]>([]);
+  const fieldRef = useRef<HTMLDivElement>(null);
+  const gradientPrefix = `pebble-${useId().replace(/:/g, '')}`;
+
+  // Randomised per visit, in the browser: doing it during render would make the
+  // server and the first client paint disagree.
+  useEffect(() => {
+    setStones(scatter(fieldBounds(window.innerWidth, window.innerHeight)));
+  }, []);
 
   useEffect(() => {
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
-    if (reduced.matches) return;
+    const field = fieldRef.current;
+    if (!field || stones.length === 0) return;
+
+    const nodes = Array.from(field.querySelectorAll<SVGSVGElement>('svg[data-stone]'));
+    const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    let bounds = fieldBounds(window.innerWidth, window.innerHeight);
+    let lastScroll = window.scrollY;
+    let pendingScroll = 0;
+    let frame = 0;
+    let idle = 0;
+
+    const paint = () => {
+      const lift = (bounds.height - window.innerHeight) / 2;
+      for (let i = 0; i < nodes.length; i += 1) {
+        const stone = stones[i];
+        nodes[i].style.transform = `translate3d(${stone.x - stone.size / 2}px, ${
+          stone.y - lift - stone.size / 2
+        }px, 0)`;
+        const path = nodes[i].firstElementChild as SVGPathElement;
+        path.setAttribute('transform', `rotate(${stone.angle.toFixed(1)} 50 50)`);
+      }
+    };
+
+    const tick = () => {
+      const scrolled = pendingScroll;
+      pendingScroll = 0;
+      const moving = step(stones, bounds, scrolled);
+      paint();
+
+      // Keep running a little past the last motion so a collision finishes,
+      // then stop rather than burning frames on a settled field.
+      idle = moving || scrolled !== 0 ? 0 : idle + 1;
+      frame = idle > 20 ? 0 : requestAnimationFrame(tick);
+    };
+
+    /** Restarts the loop if it stopped. Never gates the scroll itself. */
+    const wake = () => {
+      idle = 0;
+      if (!frame) frame = requestAnimationFrame(tick);
+    };
 
     const onScroll = () => {
-      if (frame.current) return;
-      frame.current = requestAnimationFrame(() => {
-        frame.current = 0;
-        setOffset(window.scrollY);
-      });
+      const now = window.scrollY;
+      pendingScroll += now - lastScroll;
+      lastScroll = now;
+      if (still) {
+        // No animation, but the field still has to follow the page.
+        step(stones, bounds, pendingScroll);
+        pendingScroll = 0;
+        paint();
+        return;
+      }
+      wake();
     };
 
+    const onResize = () => {
+      bounds = fieldBounds(window.innerWidth, window.innerHeight);
+      reflow(stones, bounds);
+      still ? paint() : wake();
+    };
+
+    paint();
     window.addEventListener('scroll', onScroll, { passive: true });
-    onScroll();
+    window.addEventListener('resize', onResize, { passive: true });
     return () => {
       window.removeEventListener('scroll', onScroll);
-      if (frame.current) cancelAnimationFrame(frame.current);
+      window.removeEventListener('resize', onResize);
+      if (frame) cancelAnimationFrame(frame);
     };
-  }, []);
+  }, [stones]);
 
   return (
     <div
+      ref={fieldRef}
       aria-hidden="true"
-      className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
+      className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
       style={{ backgroundColor: palette.background }}
     >
-      {pebbles.map((pebble, index) => {
-        // Wrapping keeps the field populated at any scroll depth. Without it
-        // every pebble drifts off the top within a screen or two and the page
-        // is left bare, which is what made the effect look broken.
-        const drift = (offset * pebble.depth) / 8;
-        const y = (((pebble.y - drift) % FIELD_HEIGHT) + FIELD_HEIGHT) % FIELD_HEIGHT;
+      {/* One gradient per choice colour, shared by every stone that uses it.
+          `userSpaceOnUse` anchors the light to the drawing box rather than to
+          the path, so a stone that rolls keeps its highlight facing the light
+          instead of carrying it round. */}
+      <svg className="absolute h-0 w-0" aria-hidden="true">
+        <defs>
+          {choiceColours.map((choice, index) => (
+            <radialGradient
+              key={choice.color}
+              id={`${gradientPrefix}-${index}`}
+              gradientUnits="userSpaceOnUse"
+              cx="34"
+              cy="28"
+              r="78"
+            >
+              <stop offset="0%" stopColor={lighten(choice.color, 0.55)} />
+              <stop offset="45%" stopColor={choice.color} />
+              <stop offset="100%" stopColor={darken(choice.color, 0.4)} />
+            </radialGradient>
+          ))}
+        </defs>
+      </svg>
+
+      {stones.map((stone, index) => {
+        const colourIndex = choiceColours.findIndex((c) => c.color === stone.colour);
         return (
-          <span
+          <svg
             key={index}
-            className="absolute rounded-full blur-[2px]"
-            style={{
-              left: `${pebble.x}%`,
-              top: `${y - 20}vh`,
-              width: pebble.r * 2,
-              height: pebble.r * 2,
-              marginLeft: -pebble.r,
-              marginTop: -pebble.r,
-              backgroundColor: pebble.colour,
-              opacity: pebble.opacity,
-              willChange: 'top',
-            }}
-          />
+            data-stone
+            viewBox="0 0 100 100"
+            className="absolute left-0 top-0"
+            style={{ width: stone.size, height: stone.size, willChange: 'transform' }}
+          >
+            <path
+              d={PEBBLE_SHAPES[stone.shape]}
+              fill={`url(#${gradientPrefix}-${Math.max(0, colourIndex)})`}
+              fillOpacity={stone.fillOpacity}
+              stroke={darken(stone.colour, 0.2)}
+              strokeOpacity={stone.strokeOpacity}
+              strokeWidth={1.4}
+              // A hairline that keeps the same weight whatever size the stone
+              // is drawn at, so the outline reads as an edge, not as scale.
+              vectorEffect="non-scaling-stroke"
+            />
+          </svg>
         );
       })}
     </div>
@@ -115,3 +172,5 @@ export const AppBackground: React.FC = () => {
   if (background === 'none') return null;
   return <PebbleField />;
 };
+
+export { FIELD_VIEWPORTS };

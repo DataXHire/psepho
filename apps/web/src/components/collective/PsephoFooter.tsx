@@ -53,7 +53,7 @@ export const PsephoFooter: React.FC = () => {
 
   return (
     <>
-      <footer className="mt-auto w-full border-t border-outline-variant/15 bg-surface-container-low py-10">
+      <footer className="relative z-10 mt-auto w-full border-t border-outline-variant/15 bg-surface-container-low py-10">
         <div className="mx-auto flex max-w-[1000px] flex-col items-center justify-between gap-6 px-container-padding-mobile md:flex-row">
           <div className="flex items-center gap-2 font-display text-xl font-bold text-on-surface">
             <BrandMark size={20} />

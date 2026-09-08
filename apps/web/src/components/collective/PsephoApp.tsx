@@ -34,11 +34,11 @@ export const PsephoApp: React.FC = () => {
   const isFiltered = activeCategory !== 'All' || search.trim().length > 0;
 
   return (
-    <div className="relative flex min-h-screen flex-col bg-background text-on-background">
+    <div className="relative flex min-h-screen flex-col text-on-background">
       <AppBackground />
       <PsephoHeader />
 
-      <main className="mx-auto w-full max-w-[1200px] flex-grow px-container-padding-mobile pb-16 pt-24 md:px-container-padding-desktop">
+      <main className="relative z-10 mx-auto w-full max-w-[1200px] flex-grow px-container-padding-mobile pb-16 pt-24 md:px-container-padding-desktop">
         <ProposalsPanel />
 
         {activeTab === 'Topics' && <TopicsBrowser />}
