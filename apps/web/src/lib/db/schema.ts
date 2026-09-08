@@ -98,3 +98,34 @@ export const pollResults = pgTable(
     payload: jsonb('payload').notNull(), // IRVResult
   }
 );
+
+export const users = pgTable(
+  'users',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    googleId: text('google_id').notNull().unique(),
+    email: text('email').notNull().unique(),
+    name: text('name').notNull(),
+    avatar: text('avatar'),
+    birthYear: integer('birth_year'),
+    birthMonth: integer('birth_month'),
+    birthDay: integer('birth_day'),
+    birthPrecision: text('birth_precision'), // 'year' | 'month' | 'day'
+    ageCohort: text('age_cohort'), // '18-24' | '25-34' | '35-49' | '50+'
+    stateId: text('state_id'),
+    stateCode: text('state_code'),
+    district: text('district'),
+    districtId: text('district_id'),
+    city: text('city'),
+    region: text('region'),
+    role: text('role'),
+    onboardingCompleted: boolean('onboarding_completed').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('idx_users_google_id').on(table.googleId),
+    index('idx_users_email').on(table.email),
+  ]
+);
+

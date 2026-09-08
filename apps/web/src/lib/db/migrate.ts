@@ -63,6 +63,32 @@ export async function runMigrations() {
         computed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         payload JSONB NOT NULL
       );
+
+      CREATE TABLE IF NOT EXISTS users (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        google_id TEXT UNIQUE NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        name TEXT NOT NULL,
+        avatar TEXT,
+        birth_year INT,
+        birth_month INT,
+        birth_day INT,
+        birth_precision TEXT,
+        age_cohort TEXT,
+        state_id TEXT,
+        state_code TEXT,
+        district TEXT,
+        district_id TEXT,
+        city TEXT,
+        region TEXT,
+        role TEXT,
+        onboarding_completed BOOLEAN NOT NULL DEFAULT false,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_users_google_id ON users (google_id);
+      CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
     `);
     console.log('Migrations executed successfully.');
   } finally {
