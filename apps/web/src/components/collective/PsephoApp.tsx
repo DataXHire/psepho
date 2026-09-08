@@ -16,6 +16,7 @@ import { ProposalsPanel } from './ProposalsPanel';
 import { TopicsBrowser } from './TopicsBrowser';
 import { AskQuestionModal } from './AskQuestionModal';
 import { PersonaModal } from './PersonaModal';
+import { FirstSignInModal } from './FirstSignInModal';
 import { PollDetailModal } from './PollDetailModal';
 import { PsephoFooter } from './PsephoFooter';
 
@@ -154,6 +155,7 @@ export const PsephoApp: React.FC = () => {
 
       <AskQuestionModal />
       <PersonaModal />
+      <FirstSignInModal />
       <PollDetailModal />
     </div>
   );

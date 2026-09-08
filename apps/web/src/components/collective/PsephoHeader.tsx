@@ -158,8 +158,17 @@ export const PsephoHeader: React.FC = () => {
               onClick={openPersonaModal}
               className="flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1.5 font-label-bold text-xs text-primary transition-colors hover:bg-primary/20"
             >
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-on-primary">
-                {currentProfile.avatar || currentProfile.name[0]}
+              <span className="flex h-5 w-5 overflow-hidden items-center justify-center rounded-full bg-primary text-[10px] font-bold text-on-primary">
+                {currentProfile.avatar && currentProfile.avatar.startsWith('http') ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={currentProfile.avatar}
+                    alt={currentProfile.name}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  currentProfile.avatar || currentProfile.name[0]
+                )}
               </span>
               <span className="hidden md:inline">{currentProfile.name.split(' ')[0]}</span>
               <span className="hidden text-[10px] text-on-surface-variant lg:inline">

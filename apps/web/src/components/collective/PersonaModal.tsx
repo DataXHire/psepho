@@ -38,6 +38,7 @@ const DEV_PERSONAS: Persona[] =
 import { Button, Chip, Clamp, Ellipsis, KeyValue, Modal } from '@/components/ui';
 import { BirthDateField } from './BirthDateField';
 import { LocationField, type LocationValue } from './LocationField';
+import { GoogleSignInButton } from './GoogleSignInButton';
 
 const FIELD =
   'w-full rounded-lg border border-outline-variant/30 bg-surface-container-low px-3 py-2 text-sm text-on-surface outline-none transition-all placeholder:text-outline focus:border-primary focus:bg-surface-bright';
@@ -48,6 +49,7 @@ export const PersonaModal: React.FC = () => {
     closePersonaModal,
     currentProfile,
     setCurrentProfile,
+    signOut,
     dataMode,
     setDataMode,
   } = usePsepho();
@@ -103,6 +105,23 @@ export const PersonaModal: React.FC = () => {
         what you type below.
       </p>
 
+      {!currentProfile && (
+        <div className="mb-5">
+          <GoogleSignInButton
+            label="Sign in with Google"
+            onSuccess={() => closePersonaModal()}
+          />
+          <div className="relative my-4 flex items-center justify-center">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-outline-variant/30" />
+            </div>
+            <span className="relative bg-surface-container-lowest px-2.5 text-[11px] font-label-bold text-on-surface-variant">
+              or specify demographics manually
+            </span>
+          </div>
+        </div>
+      )}
+
       {currentProfile && (
         <div className="mb-5 rounded-lg border border-primary/20 bg-surface-container p-3">
           <KeyValue
@@ -117,8 +136,7 @@ export const PersonaModal: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
-                  setCurrentProfile(null);
-                  closePersonaModal();
+                  signOut();
                 }}
                 className="font-semibold text-tertiary hover:underline"
               >
@@ -126,10 +144,18 @@ export const PersonaModal: React.FC = () => {
               </button>
             }
           />
-          <div className="mt-1.5 flex flex-wrap gap-1.5">
-            <Chip tone="primary">{currentProfile.ageCohort}</Chip>
+          {currentProfile.email && (
+            <p className="mt-0.5 text-[11px] text-on-surface-variant">
+              Connected to <span className="font-medium text-on-surface">{currentProfile.email}</span>
+            </p>
+          )}
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            <Chip tone="primary">Cohort {currentProfile.ageCohort}</Chip>
             {currentProfile.birthDate && (
-              <Chip tone="neutral">{describeBirthDate(currentProfile.birthDate)}</Chip>
+              <Chip tone="neutral">
+                Born {describeBirthDate(currentProfile.birthDate)} (
+                {currentProfile.birthPrecision || 'year'} precision)
+              </Chip>
             )}
             <Chip tone="neutral">
               {currentProfile.district || currentProfile.stateCode} · {currentProfile.region} India
