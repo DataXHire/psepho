@@ -1,11 +1,17 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Poll, UserProfile } from './types';
+import { Poll, UserProfile, GoogleUser, BirthDate, BirthPrecision } from './types';
 import { initialPolls } from './seedData';
 import { castVoteInPoll } from './analytics';
 import { appConfig, type BackgroundStyle, type CategoryFilter } from '@/lib/config/appConfig';
 import { DEFAULT_DATA_MODE, IS_DEV_BUILD, type DataMode } from '@/lib/config/environment';
+
+export interface LocationSelection {
+  stateId: string;
+  districtId?: string;
+  districtName?: string;
+}
 
 interface PsephoContextType {
   polls: Poll[];
@@ -22,6 +28,26 @@ interface PsephoContextType {
   isPersonaModalOpen: boolean;
   openPersonaModal: () => void;
   closePersonaModal: () => void;
+  isFirstSignInModalOpen: boolean;
+  openFirstSignInModal: () => void;
+  closeFirstSignInModal: () => void;
+  pendingGoogleUser: GoogleUser | null;
+  handleGoogleAuth: (data: {
+    credential?: string;
+    googleId?: string;
+    email?: string;
+    name?: string;
+    avatar?: string;
+  }) => Promise<{ isFirstSignIn: boolean }>;
+  completeFirstSignIn: (details: {
+    name: string;
+    birthDate: BirthDate;
+    precision: BirthPrecision;
+    location: LocationSelection;
+    city?: string;
+    role?: string;
+  }) => Promise<void>;
+  signOut: () => Promise<void>;
   inspectPollId: string | null;
   setInspectPollId: (id: string | null) => void;
   castVote: (pollId: string, optionId: string) => void;
@@ -49,6 +75,7 @@ interface PsephoContextType {
 
 const PsephoContext = createContext<PsephoContextType | undefined>(undefined);
 
+
 // Bumped because polls gained a lifecycle: stored v2 polls have no `status`.
 const STORAGE_KEY_POLLS = 'psepho_polls_v3';
 const STORAGE_KEY_VOTES = 'psepho_votes_v3';
@@ -63,6 +90,8 @@ export function PsephoProvider({ children }: { children: React.ReactNode }) {
   const [currentProfile, setCurrentProfile] = useState<UserProfile | null>(null);
   const [isAskModalOpen, setIsAskModalOpen] = useState<boolean>(false);
   const [isPersonaModalOpen, setIsPersonaModalOpen] = useState<boolean>(false);
+  const [isFirstSignInModalOpen, setIsFirstSignInModalOpen] = useState<boolean>(false);
+  const [pendingGoogleUser, setPendingGoogleUser] = useState<GoogleUser | null>(null);
   const [inspectPollId, setInspectPollId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [showProposalsPanel, setShowProposalsPanel] = useState(true);
@@ -221,6 +250,123 @@ export function PsephoProvider({ children }: { children: React.ReactNode }) {
     return newPoll;
   };
 
+  const handleGoogleAuth = async (data: {
+    credential?: string;
+    googleId?: string;
+    email?: string;
+    name?: string;
+    avatar?: string;
+  }) => {
+    try {
+      const res = await fetch('/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const result = await res.json();
+      if (result.success) {
+        if (result.isFirstSignIn) {
+          setPendingGoogleUser({
+            googleId: result.user.googleId || data.googleId || `user-${Date.now()}`,
+            email: result.user.email || data.email || '',
+            name: result.user.name || data.name || 'Google User',
+            avatar: result.user.avatar || data.avatar,
+          });
+          setIsPersonaModalOpen(false);
+          setIsFirstSignInModalOpen(true);
+          return { isFirstSignIn: true };
+        } else {
+          setCurrentProfile(result.user);
+          setIsPersonaModalOpen(false);
+          setIsFirstSignInModalOpen(false);
+          return { isFirstSignIn: false };
+        }
+      }
+    } catch (e) {
+      console.warn('Google auth fetch failed, falling back to local onboarding flow', e);
+    }
+
+    // Offline / fallback path:
+    setPendingGoogleUser({
+      googleId: data.googleId || `google-mock-${Date.now()}`,
+      email: data.email || 'voter@gmail.com',
+      name: data.name || 'Google User',
+      avatar: data.avatar,
+    });
+    setIsPersonaModalOpen(false);
+    setIsFirstSignInModalOpen(true);
+    return { isFirstSignIn: true };
+  };
+
+  const completeFirstSignIn = async (details: {
+    name: string;
+    birthDate: BirthDate;
+    precision: BirthPrecision;
+    location: LocationSelection;
+    city?: string;
+    role?: string;
+  }) => {
+    try {
+      const res = await fetch('/api/auth/complete-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: pendingGoogleUser?.googleId,
+          name: details.name,
+          birthDate: details.birthDate,
+          precision: details.precision,
+          location: details.location,
+          city: details.city,
+          role: details.role,
+        }),
+      });
+      const result = await res.json();
+      if (result.success && result.user) {
+        setCurrentProfile(result.user);
+        setPendingGoogleUser(null);
+        setIsFirstSignInModalOpen(false);
+        return;
+      }
+    } catch (e) {
+      console.warn('Complete profile API failed, saving to local profile:', e);
+    }
+
+    // Local state fallback:
+    const profile: UserProfile = {
+      id: pendingGoogleUser?.googleId || `user-${Date.now()}`,
+      name: details.name.trim(),
+      avatar: pendingGoogleUser?.avatar || details.name.trim().slice(0, 2).toUpperCase(),
+      email: pendingGoogleUser?.email,
+      googleId: pendingGoogleUser?.googleId,
+      role: details.role?.trim() || 'Civic participant',
+      city: details.city?.trim() || details.location.districtName || '',
+      district: details.location.districtName || '',
+      districtId: details.location.districtId,
+      stateId: details.location.stateId,
+      stateCode: 'KA',
+      region: 'South',
+      birthDate: details.birthDate,
+      birthPrecision: details.precision,
+      ageCohort: '25-34',
+      sector: 'General',
+    };
+    setCurrentProfile(profile);
+    setPendingGoogleUser(null);
+    setIsFirstSignInModalOpen(false);
+  };
+
+  const signOut = async () => {
+    try {
+      await fetch('/api/auth/signout', { method: 'POST' });
+    } catch (e) {
+      console.warn('Signout fetch failed:', e);
+    }
+    setCurrentProfile(null);
+    setPendingGoogleUser(null);
+    setIsPersonaModalOpen(false);
+    setIsFirstSignInModalOpen(false);
+  };
+
   return (
     <PsephoContext.Provider
       value={{
@@ -238,6 +384,13 @@ export function PsephoProvider({ children }: { children: React.ReactNode }) {
         isPersonaModalOpen,
         openPersonaModal: () => setIsPersonaModalOpen(true),
         closePersonaModal: () => setIsPersonaModalOpen(false),
+        isFirstSignInModalOpen,
+        openFirstSignInModal: () => setIsFirstSignInModalOpen(true),
+        closeFirstSignInModal: () => setIsFirstSignInModalOpen(false),
+        pendingGoogleUser,
+        handleGoogleAuth,
+        completeFirstSignIn,
+        signOut,
         inspectPollId,
         setInspectPollId,
         castVote,

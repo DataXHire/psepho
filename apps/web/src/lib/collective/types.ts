@@ -83,6 +83,8 @@ export interface UserProfile {
   id: string;
   name: string;
   avatar?: string;
+  email?: string;
+  googleId?: string;
   role: string;
   city: string;
   /** Display name of the district, e.g. "Bengaluru Urban". */
@@ -96,10 +98,19 @@ export interface UserProfile {
   region: GeoRegion;
   /** Exactly as much of the birth date as the viewer chose to give. */
   birthDate?: BirthDate;
+  birthPrecision?: BirthPrecision;
   /** Age band used for analysis. Derived from `birthDate` when there is one. */
   ageCohort: AgeCohort;
   sector: string;
 }
+
+export interface GoogleUser {
+  googleId: string;
+  email: string;
+  name: string;
+  avatar?: string;
+}
+
 
 export interface AnomalyDiscovery {
   cohort: AgeCohort;
