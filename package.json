@@ -3,9 +3,15 @@
   "private": true,
   "scripts": {
     "dev": "turbo run dev",
+    "dev:web": "pnpm --filter @psepho/web dev",
+    "dev:mobile": "pnpm --filter @psepho/mobile dev",
     "build": "turbo run build",
     "test": "turbo run test",
-    "lint": "turbo run lint"
+    "lint": "turbo run lint",
+    "cdk:synth": "pnpm --filter @psepho/infra cdk:synth",
+    "cdk:diff": "pnpm --filter @psepho/infra cdk:diff",
+    "cdk:deploy:dev": "pnpm --filter @psepho/infra deploy:dev",
+    "cdk:deploy:prod": "pnpm --filter @psepho/infra deploy:prod"
   },
   "devDependencies": {
     "turbo": "^2.4.4",
