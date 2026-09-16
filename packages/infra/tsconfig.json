@@ -21,7 +21,6 @@
     "skipLibCheck": true,
     "outDir": "dist",
     "rootDir": ".",
-    "typeRoots": ["./node_modules/@types"]
   },
   "include": ["bin/**/*", "lib/**/*", "config/**/*"],
   "exclude": ["node_modules", "cdk.out", "dist"]

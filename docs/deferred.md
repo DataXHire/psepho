@@ -10,3 +10,4 @@ This document tracks features, dependencies, or architectural layers considered 
 | **Paid third-party realtime (Pusher, Ably)** | Banned in favor of efficient HTTP polling with strong ETags and SSE for Room mode only. | Not needed |
 | **Push notification provider** | Hooks kept clean, no external push provider wired in v1. | Mobile v2 |
 | **Monospace numbers for UI** | Explicitly forbidden in design spec; replaced by `font-variant-numeric: tabular-nums` on variable Archivo. | Not needed |
+| **DynamoDB persistence migration** | The application is implemented around Drizzle and PostgreSQL, including relational poll, ballot, receipt, and IRV-query access patterns. DynamoDB would require a new data model, access-pattern/index design, migration path, and storage layer; it is not a safe deployment-time replacement for the existing RDS configuration. | Explicit architecture decision / Post-v1 |
