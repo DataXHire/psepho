@@ -1,8 +1,8 @@
 version: 1
 
 applications:
-  - appRoot: apps/web
-    frontend:
+  - frontend:
+      buildPath: /
       phases:
         preBuild:
           commands:
@@ -10,16 +10,20 @@ applications:
             - corepack prepare pnpm@11.16.0 --activate
             - pnpm --version
             - pnpm install --frozen-lockfile
+
         build:
           commands:
-            - env | grep -E '^(DATABASE_URL|SERVER_PEPPER|NEXT_PUBLIC_)' >> .env.production || true
-            - pnpm run build
+            - env | grep -E '^(DATABASE_URL|SERVER_PEPPER|NEXT_PUBLIC_)' >> apps/web/.env.production || true
+            - pnpm --filter @psepho/web build
+
       artifacts:
-        baseDirectory: .next
+        baseDirectory: apps/web/.next
         files:
           - '**/*'
+
       cache:
         paths:
           - node_modules/**/*
-          - ~/.local/share/pnpm/store/**/*
-          - .next/cache/**/*
+          - apps/web/.next/cache/**/*
+
+    appRoot: apps/web
